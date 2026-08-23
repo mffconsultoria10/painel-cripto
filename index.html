@@ -770,9 +770,6 @@
   };
   // Poeira sem valor relevante para mapear (MON, WGC, MM.Finance) — fica no valor do snapshot.
   const SPOT_STATIC = { 'Carteira 1': 29.61, 'Carteira 2': 0.03 };
-  // BTC e ETH somando carteira + colateral no Aave, mesma base da tabela de exposição consolidada —
-  // usado para aproximar a variação de 24h do patrimônio a partir da variação do BTC/ETH.
-  const BTC_QTY_TOTAL = 0.6374, ETH_QTY_TOTAL = 4.5402;
   // Parte do saldo em carteira coberta pela leitura ao vivo (cbBTC/WBTC, ETH/WETH, POL, SOL, UNI, HYPE) — começa com o valor do snapshot e é atualizada por refreshSpotLive().
   let spotLive = { 'Carteira 1': 16844 - 29.61, 'Carteira 2': 1284 - 0.03 };
   let aaveNet = { 'Carteira 1': 14669 + 11866, 'Carteira 2': 1700 + 1072 };
@@ -908,6 +905,14 @@
     polyUNI: '0xb33EaAd8d922B1083446DC23f610c2567fB5180f',
     polySOL: '0xD93f7E271cB87c23AAa73edC008A79646d1F9912',
   };
+  // aTokens (Aave) usados só para compor a exposição real de BTC/ETH por carteira (spot + fornecido no Aave),
+  // e assim calcular a variação de 24h de cada carteira com o peso certo — não o mesmo número genérico pras duas.
+  const A_TOKENS = {
+    polyArbWBTC: '0x078f358208685046a11C85e8ad32895DED33A249', // aPolWBTC / aArbWBTC (mesmo endereço nas duas redes)
+    polyArbWETH: '0xe50fA9b3c56FfB159cB0FCA61F5c9D750e8128c8', // aPolWETH / aArbWETH
+    baseWETH: '0xd4a0e0B9149BCee3C920d2E00b5dE09138Fd8bb7',    // aBasWETH
+    baseCbBTC: '0xBdb9300b7CDE636d9cD4AFF00f6F009fFBBc8EE6',   // aBascbBTC
+  };
 
   function setSpotCell(prefix, qty, price) {
     document.getElementById(prefix + 'Qty').textContent = qty.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
@@ -944,6 +949,23 @@
     ]);
     const w2EthQty = w2BaseEth + w2ArbEth + w2EthEth;
 
+    // Saldo fornecido no Aave (WBTC/WETH/cbBTC) por carteira, pra saber a exposição real de cada uma a BTC/ETH.
+    const [w1AavePolyWbtc, w1AaveArbWbtc, w1AavePolyWeth, w1AaveArbWeth] = await Promise.all([
+      erc20Bal(RPC.polygon, A_TOKENS.polyArbWBTC, w1, 8),
+      erc20Bal(RPC.arbitrum, A_TOKENS.polyArbWBTC, w1, 8),
+      erc20Bal(RPC.polygon, A_TOKENS.polyArbWETH, w1, 18),
+      erc20Bal(RPC.arbitrum, A_TOKENS.polyArbWETH, w1, 18),
+    ]);
+    const [w2AaveArbWbtc, w2AaveBaseWeth, w2AaveBaseCbbtc] = await Promise.all([
+      erc20Bal(RPC.arbitrum, A_TOKENS.polyArbWBTC, w2, 8),
+      erc20Bal(RPC.base, A_TOKENS.baseWETH, w2, 18),
+      erc20Bal(RPC.base, A_TOKENS.baseCbBTC, w2, 8),
+    ]);
+    const w1BtcTotalQty = w1CbbtcQty + w1AavePolyWbtc + w1AaveArbWbtc;
+    const w1EthTotalQty = w1EthQty + w1WethQty + w1AavePolyWeth + w1AaveArbWeth;
+    const w2BtcTotalQty = w2WbtcQty + w2AaveArbWbtc + w2AaveBaseCbbtc;
+    const w2EthTotalQty = w2EthQty + w2WethQty + w2AaveBaseWeth;
+
     setSpotCell('w1cbbtc', w1CbbtcQty, btcPrice);
     setSpotCell('w1eth', w1EthQty, ethPrice);
     setSpotCell('w1weth', w1WethQty, ethPrice);
@@ -962,17 +984,27 @@
     recomputeTotals();
     document.getElementById('spotLiveBadge').hidden = false;
 
-    // Variação 24h ponderada por BTC/ETH (carteira + Aave) — dominam a exposição, então aproxima bem a
-    // variação real do patrimônio sem exigir histórico de preço de cada ativo secundário.
+    // Variação 24h ponderada por BTC/ETH (carteira + Aave), calculada PARA CADA CARTEIRA com a
+    // exposição real dela — não é a mesma % genérica pras duas, cada uma pesa pelo que ela de fato tem.
     const btc24h = priceData.bitcoin.usd_24h_change;
     const eth24h = priceData.ethereum.usd_24h_change;
+    function blend24h(btcQty, ethQty) {
+      const btcUSD = btcQty * btcPrice, ethUSD = ethQty * ethPrice;
+      const total = btcUSD + ethUSD;
+      return total > 0 ? (btcUSD * btc24h + ethUSD * eth24h) / total : null;
+    }
     if (typeof btc24h === 'number' && typeof eth24h === 'number') {
-      const btcExposureUSD = BTC_QTY_TOTAL * btcPrice;
-      const ethExposureUSD = ETH_QTY_TOTAL * ethPrice;
-      const blended = (btcExposureUSD * btc24h + ethExposureUSD * eth24h) / (btcExposureUSD + ethExposureUSD);
-      setDeltaPill('deltaPill', blended, ' nas últimas 24h (aprox. BTC/ETH)');
-      setDeltaPill('w1DeltaPill', blended, '');
-      setDeltaPill('w2DeltaPill', blended, '');
+      const w1Blend = blend24h(w1BtcTotalQty, w1EthTotalQty);
+      const w2Blend = blend24h(w2BtcTotalQty, w2EthTotalQty);
+      if (w1Blend != null) setDeltaPill('w1DeltaPill', w1Blend, '');
+      if (w2Blend != null) setDeltaPill('w2DeltaPill', w2Blend, '');
+      const combinedBtcUSD = (w1BtcTotalQty + w2BtcTotalQty) * btcPrice;
+      const combinedEthUSD = (w1EthTotalQty + w2EthTotalQty) * ethPrice;
+      const combinedTotal = combinedBtcUSD + combinedEthUSD;
+      if (combinedTotal > 0) {
+        const blended = (combinedBtcUSD * btc24h + combinedEthUSD * eth24h) / combinedTotal;
+        setDeltaPill('deltaPill', blended, ' nas últimas 24h (aprox. BTC/ETH)');
+      }
     }
 
     onLiveSuccess();
