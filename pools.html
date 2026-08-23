@@ -225,7 +225,7 @@
   </div>
 
   <footer>
-    Posições marcadas "detectada on-chain" vêm direto do contrato NonfungiblePositionManager da Uniswap V3 (Arbitrum, Base e outras redes) para as carteiras 1 e 2, lidas sob pedido — a página em si não faz essa consulta sozinha ao carregar, por restrição de segurança do navegador. Data de criação e valor investido vêm do evento de depósito inicial da posição (IncreaseLiquidity) buscado retroativamente na blockchain (até ~15 janelas de 10 mil blocos, o que cobre alguns dias de histórico nos nós públicos gratuitos); posições mais antigas que isso ficam com valor investido zerado até você completar manualmente. O preço de cada ativo na data de criação vem do histórico diário da CoinGecko. Impermanent loss estimado pela fórmula padrão (2·√k / (1+k) − 1, onde k é a razão entre o preço atual e o preço de entrada), aplicado sobre o valor investido — uma aproximação, não o valor exato do protocolo. Rentabilidade total = (valor atual + taxas coletadas − valor investido) / valor investido; rentabilidade média diária é essa rentabilidade dividida pelos dias ativos (média simples, não composta). Pools adicionadas manualmente ficam salvas apenas no armazenamento local deste navegador.
+    Posições marcadas "detectada on-chain" vêm direto do contrato NonfungiblePositionManager da Uniswap V3 (Arbitrum, Base e outras redes) para as carteiras 1 e 2, lidas sob pedido — a página em si não faz essa consulta sozinha ao carregar, por restrição de segurança do navegador. Data de criação e valor investido vêm do evento de depósito inicial da posição (IncreaseLiquidity) buscado retroativamente na blockchain (até ~15 janelas de 10 mil blocos, o que cobre alguns dias de histórico nos nós públicos gratuitos); posições mais antigas que isso ficam com valor investido zerado até você completar manualmente. O preço de cada ativo na data de criação vem do histórico diário da CoinGecko. Taxas acumuladas são recalculadas ao vivo via feeGrowthInside (a mesma conta que o contrato faz dentro de collect()), não o valor desatualizado gravado na última interação com a posição. Pool APR = taxas acumuladas ÷ valor investido, anualizado pelo tempo real decorrido desde a criação — mede só o rendimento de taxas desta posição, sem contar IL nem variação de preço; como é calculado a partir do que essa posição específica já acumulou, pode oscilar bastante nas primeiras horas/dias (e não é diretamente comparável ao "Pool APR" agregado que sites como o revert.finance mostram, que usa o volume histórico da pool inteira). Impermanent loss estimado pela fórmula padrão (2·√k / (1+k) − 1, onde k é a razão entre o preço atual e o preço de entrada), aplicado sobre o valor investido — uma aproximação, não o valor exato do protocolo. Retorno total = (valor atual + taxas acumuladas − valor investido) / valor investido, já incluindo IL; média diária é esse retorno dividido pelos dias ativos (média simples, não composta). Pools adicionadas manualmente ficam salvas apenas no armazenamento local deste navegador.
   </footer>
 
 </div>
@@ -250,6 +250,24 @@
     const d = new Date(dateStr + 'T00:00:00');
     const now = new Date();
     return Math.max(1, Math.round((now - d) / 86400000));
+  }
+  const MONTHS_EN = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+  function formatRevertDate(date) {
+    const dd = String(date.getUTCDate()).padStart(2, '0');
+    const mmm = MONTHS_EN[date.getUTCMonth()];
+    const yyyy = date.getUTCFullYear();
+    const hh = String(date.getUTCHours()).padStart(2, '0');
+    const mi = String(date.getUTCMinutes()).padStart(2, '0');
+    return `${dd}/${mmm}/${yyyy} ${hh}:${mi} UTC`;
+  }
+  // Idade legível no mesmo estilo do revert.finance: minutos/horas para posições recentes, dias depois disso.
+  function formatAge(mintTimestamp) {
+    if (!mintTimestamp) return '';
+    const secs = Math.max(0, Math.floor(Date.now() / 1000) - mintTimestamp);
+    if (secs < 3600) return `${Math.max(1, Math.round(secs / 60))} min`;
+    if (secs < 86400) return `${Math.round(secs / 3600)} h`;
+    const days = Math.round(secs / 86400);
+    return `${days} dia${days === 1 ? '' : 's'}`;
   }
   function num(v) { const n = parseFloat(String(v).replace(/\./g, '').replace(',', '.')); return isNaN(n) ? 0 : n; }
   function numToInput(n) { return typeof n === 'number' ? n.toLocaleString('pt-BR', { maximumFractionDigits: 8 }) : (n ?? ''); }
@@ -315,7 +333,11 @@
     const rentTotalPct = p.investido > 0 ? ((valorAtual + p.taxas - p.investido) / p.investido * 100) : 0;
     const rentDiaPct = dias > 0 ? rentTotalPct / dias : 0;
     const rangePos = p.max > p.min ? Math.min(100, Math.max(0, (p.atual - p.min) / (p.max - p.min) * 100)) : 50;
-    return { valorAtual, pctA, pctB, inRange, dias, ilPct, ilUsd, rentTotalPct, rentDiaPct, rangePos };
+    // Pool APR: só as taxas (sem IL/variação de preço), anualizada pelo tempo real decorrido —
+    // com posição recém-criada, pouquíssimas horas de dado fazem esse número oscilar bastante.
+    const diasPrecisos = p.mintTimestamp ? Math.max(1 / 24, (Date.now() / 1000 - p.mintTimestamp) / 86400) : dias;
+    const poolAprPct = p.investido > 0 && diasPrecisos > 0 ? (p.taxas / p.investido) * (365 / diasPrecisos) * 100 : 0;
+    return { valorAtual, pctA, pctB, inRange, dias, ilPct, ilUsd, rentTotalPct, rentDiaPct, rangePos, poolAprPct };
   }
 
   function renderSummary() {
@@ -356,7 +378,7 @@
               <span class="tag">${p.rede}</span>
               <span class="tag">${p.carteira}</span>
               ${p.mintDateTime
-                ? `<span class="tag">Criada em ${p.mintDateTime}${c.dias > 0 ? ` · ${c.dias} dia${c.dias === 1 ? '' : 's'}` : ''}</span>`
+                ? `<span class="tag">position age: ${formatAge(p.mintTimestamp)} · ${p.mintDateTime}</span>`
                 : (c.dias > 0 ? `<span class="tag">${c.dias} dia${c.dias === 1 ? '' : 's'} ativa</span>` : '')}
               ${p.nftId ? `<span class="tag">NFT #${p.nftId}</span>` : ''}
             </div>
@@ -396,9 +418,10 @@
           <div class="stats-grid">
             <div class="mini-stat"><div class="k">Investido</div><div class="v num">${fmtUSD(p.investido)}</div></div>
             <div class="mini-stat"><div class="k">Valor atual</div><div class="v num">${fmtUSD(c.valorAtual)}</div></div>
-            <div class="mini-stat"><div class="k">Taxas coletadas</div><div class="v num good">${fmtUSD(p.taxas)}</div></div>
+            <div class="mini-stat"><div class="k">Taxas acumuladas</div><div class="v num good">${fmtUSD(p.taxas)}</div></div>
+            <div class="mini-stat"><div class="k">Pool APR</div><div class="v num ${c.poolAprPct >= 0 ? 'good' : 'bad'}">${fmtPct(c.poolAprPct)}</div><div class="sub num">só taxas, anualizado</div></div>
             <div class="mini-stat"><div class="k">Impermanent loss</div><div class="v num ${c.ilPct < -0.01 ? 'bad' : ''}">${fmtPct(c.ilPct)}</div><div class="sub num">${fmtUSD(c.ilUsd)}</div></div>
-            <div class="mini-stat"><div class="k">Rentabilidade total</div><div class="v num ${c.rentTotalPct >= 0 ? 'good' : 'bad'}">${fmtPct(c.rentTotalPct)}</div></div>
+            <div class="mini-stat"><div class="k">Retorno total (c/ IL)</div><div class="v num ${c.rentTotalPct >= 0 ? 'good' : 'bad'}">${fmtPct(c.rentTotalPct)}</div></div>
             <div class="mini-stat"><div class="k">Média diária</div><div class="v num ${c.rentDiaPct >= 0 ? 'good' : 'bad'}">${fmtPct(c.rentDiaPct)}</div></div>
           </div>
           ${p.auto && p.usdEstimated ? `<div style="font-size:12px;color:var(--text-faint)">Sem cotação USD para ${p.tokenA} ou ${p.tokenB} — valores em termos de ${p.tokenB}.</div>` : ''}
@@ -461,6 +484,44 @@
     Polygon:  { rpc: 'https://polygon-bor-rpc.publicnode.com',   logsRpc: 'https://polygon-bor-rpc.publicnode.com', posManager: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88', factory: '0x1F98431c8aD98523631AE4a59f267346ea31F984' },
   };
   const INCREASE_LIQUIDITY_TOPIC = '0x3067048beee31b25b2f1681f88dac838c8bba36af25bfb2b7cf7473a5847e35f';
+  // Selectors validados via keccak256 próprio (calculado e conferido nesta sessão) contra o contrato real.
+  const SEL_TICKS = '0xf30dba93';
+  const SEL_FEE_GROWTH_GLOBAL0 = '0xf3058399';
+  const SEL_FEE_GROWTH_GLOBAL1 = '0x46141319';
+  function tickWord(tick) {
+    const b = tick < 0 ? (2n ** 256n + BigInt(tick)) : BigInt(tick);
+    return b.toString(16).padStart(64, '0');
+  }
+  // Taxas realmente acumuladas agora (não só as gravadas na última interação) via feeGrowthInside,
+  // a mesma lógica que o próprio contrato usa dentro de collect().
+  async function computeUncollectedFees(rpc, poolAddr, tickLower, tickUpper, currentTick, pos) {
+    const calls = [
+      { id: 'fg0', to: poolAddr, data: SEL_FEE_GROWTH_GLOBAL0 },
+      { id: 'fg1', to: poolAddr, data: SEL_FEE_GROWTH_GLOBAL1 },
+      { id: 'tl', to: poolAddr, data: SEL_TICKS + tickWord(tickLower) },
+      { id: 'tu', to: poolAddr, data: SEL_TICKS + tickWord(tickUpper) },
+    ];
+    const r = await ethCallBatch(rpc, calls);
+    const fgGlobal0 = BigInt(r.fg0), fgGlobal1 = BigInt(r.fg1);
+    const tl = r.tl.slice(2), tu = r.tu.slice(2);
+    const fgOutLower0 = BigInt('0x' + tl.slice(2 * 64, 2 * 64 + 64));
+    const fgOutLower1 = BigInt('0x' + tl.slice(3 * 64, 3 * 64 + 64));
+    const fgOutUpper0 = BigInt('0x' + tu.slice(2 * 64, 2 * 64 + 64));
+    const fgOutUpper1 = BigInt('0x' + tu.slice(3 * 64, 3 * 64 + 64));
+    const MOD = 2n ** 256n;
+    const mod = (n) => ((n % MOD) + MOD) % MOD;
+    function feeGrowthInside(fgGlobal, fgOutLower, fgOutUpper) {
+      const below = currentTick >= tickLower ? fgOutLower : mod(fgGlobal - fgOutLower);
+      const above = currentTick < tickUpper ? fgOutUpper : mod(fgGlobal - fgOutUpper);
+      return mod(fgGlobal - below - above);
+    }
+    const fgInside0 = feeGrowthInside(fgGlobal0, fgOutLower0, fgOutUpper0);
+    const fgInside1 = feeGrowthInside(fgGlobal1, fgOutLower1, fgOutUpper1);
+    const Q128 = 2n ** 128n;
+    const fees0 = pos.tokensOwed0 + (pos.liquidity * mod(fgInside0 - pos.feeGrowthInside0Last)) / Q128;
+    const fees1 = pos.tokensOwed1 + (pos.liquidity * mod(fgInside1 - pos.feeGrowthInside1Last)) / Q128;
+    return { fees0, fees1 };
+  }
   const COINGECKO_ID = { WBTC: 'bitcoin', cbBTC: 'bitcoin', BTC: 'bitcoin', WETH: 'ethereum', ETH: 'ethereum' };
   const UNI_WALLETS = { 'Carteira 1': '0x2af9997fc77e50a3cde92b6452ee2faa0ddf2a47', 'Carteira 2': '0x68f0271fd7d9813f951419a1108fc1c9c0ba2072' };
 
@@ -611,6 +672,8 @@
             tickLower: decodeSignedWord(hex.slice(160 * 2, 160 * 2 + 64)),
             tickUpper: decodeSignedWord(hex.slice(192 * 2, 192 * 2 + 64)),
             liquidity,
+            feeGrowthInside0Last: BigInt('0x' + hex.slice(256 * 2, 256 * 2 + 64)),
+            feeGrowthInside1Last: BigInt('0x' + hex.slice(288 * 2, 288 * 2 + 64)),
             tokensOwed0: BigInt('0x' + hex.slice(320 * 2, 320 * 2 + 64)),
             tokensOwed1: BigInt('0x' + hex.slice(352 * 2, 352 * 2 + 64)),
           });
@@ -649,8 +712,16 @@
           else { raw0 = L * (1 / sqrtC - 1 / sqrtU); raw1 = L * (sqrtC - sqrtL); }
           const amount0 = raw0 / Math.pow(10, dec0);
           const amount1 = raw1 / Math.pow(10, dec1);
-          const owed0 = Number(pos.tokensOwed0) / Math.pow(10, dec0);
-          const owed1 = Number(pos.tokensOwed1) / Math.pow(10, dec1);
+
+          // tokensOwed só é atualizado na última vez que a posição foi tocada (mint/collect/etc.);
+          // para saber as taxas acumuladas agora, precisa recalcular via feeGrowthInside ao vivo.
+          let owed0 = Number(pos.tokensOwed0) / Math.pow(10, dec0);
+          let owed1 = Number(pos.tokensOwed1) / Math.pow(10, dec1);
+          try {
+            const fees = await computeUncollectedFees(cfg.rpc, poolAddr, pos.tickLower, pos.tickUpper, currentTick, pos);
+            owed0 = Number(fees.fees0) / Math.pow(10, dec0);
+            owed1 = Number(fees.fees1) / Math.pow(10, dec1);
+          } catch (e) { /* segue com o valor da última interação registrada */ }
 
           const price0USD = priceMap[symbol0], price1USD = priceMap[symbol1];
           const hasUsd = price0USD != null && price1USD != null;
@@ -659,13 +730,14 @@
           const taxasUsd = hasUsd ? (owed0 * price0USD + owed1 * price1USD) : (owed0 * curPrice + owed1);
 
           // Data de criação + depósito inicial (valor investido) via evento IncreaseLiquidity mais antigo.
-          let dataAbertura = '', entrada = curPrice, investido = 0, mintDateTime = '';
+          let dataAbertura = '', entrada = curPrice, investido = 0, mintDateTime = '', mintTimestamp = null;
           try {
             const mint = await findMintEvent(cfg.logsRpc, cfg.posManager, pos.tid);
             if (mint) {
+              mintTimestamp = mint.timestamp;
               const mintDate = new Date(mint.timestamp * 1000);
               dataAbertura = mintDate.toISOString().slice(0, 10);
-              mintDateTime = mintDate.toLocaleString('pt-BR', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' UTC';
+              mintDateTime = formatRevertDate(mintDate);
               const mintAmount0 = Number(mint.amount0) / Math.pow(10, dec0);
               const mintAmount1 = Number(mint.amount1) / Math.pow(10, dec1);
               const [histPrice0, histPrice1] = await Promise.all([
@@ -683,7 +755,7 @@
             id: `auto-${chainName}-${pos.tid}`,
             tokenA: symbol0, tokenB: symbol1,
             rede: chainName, carteira: walletId,
-            data: dataAbertura, mintDateTime, nftId: pos.tid, min: minPrice, max: maxPrice, entrada, atual: curPrice,
+            data: dataAbertura, mintDateTime, mintTimestamp, nftId: pos.tid, min: minPrice, max: maxPrice, entrada, atual: curPrice,
             investido, valorA, valorB, taxas: taxasUsd,
             usdEstimated: !hasUsd,
           });

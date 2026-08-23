@@ -645,10 +645,10 @@
           </tr>
           <tr>
             <td class="asset muted">USDC em carteira / Aave / rewards</td>
-            <td class="num muted">—</td>
-            <td class="num">299,59</td>
-            <td class="num" style="font-weight:600">299,59</td>
-            <td class="num" style="font-weight:600">US$ 299,59</td>
+            <td class="num muted" id="usdcC1">—</td>
+            <td class="num" id="usdcC2">299,59</td>
+            <td class="num" style="font-weight:600" id="usdcTotalQty">299,59</td>
+            <td class="num" style="font-weight:600" id="usdcUSD">US$ 299,59</td>
           </tr>
           <tr id="poolsRow" style="display:none">
             <td class="asset"><span class="asset-dot" style="background:#5b8def"></span>Em pools de liquidez (Uniswap V3)</td>
@@ -849,6 +849,32 @@
     document.getElementById('supTotal').textContent = fmtUSD2(supTotal);
     document.getElementById('debtTotal').textContent = fmtUSD2(debtTotal);
     document.getElementById('netTotal').textContent = fmtUSD0(supTotal - debtTotal);
+
+    // USDC fornecido no Aave por carteira (aToken em cada rede) — só composição/exibição, já está
+    // embutido no total de "Fornecido" acima (getUserAccountData soma todos os ativos), não some de novo.
+    const AUSDC = {
+      Arbitrum: '0x625E7708f30cA75bfd92586e17077590C60eb4cD',
+      Polygon: '0x625E7708f30cA75bfd92586e17077590C60eb4cD',
+      Base: '0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB',
+    };
+    const MERKL_REWARD = { 'Carteira 1': 0, 'Carteira 2': 1.73 }; // recompensa parada, sem fonte on-chain simples
+    try {
+      const usdcByWallet = { 'Carteira 1': 0, 'Carteira 2': 0 };
+      for (const [chainName, aTok] of Object.entries(AUSDC)) {
+        const cfg = AAVE_CHAINS[chainName];
+        for (const [walletId, owner] of Object.entries(AAVE_WALLETS)) {
+          const bal = await ethCall(cfg.rpc, aTok, '0x70a08231' + padHex(owner.slice(2).toLowerCase()));
+          usdcByWallet[walletId] += Number(BigInt(bal)) / 1e6;
+        }
+      }
+      usdcByWallet['Carteira 1'] += MERKL_REWARD['Carteira 1'];
+      usdcByWallet['Carteira 2'] += MERKL_REWARD['Carteira 2'];
+      const u1 = usdcByWallet['Carteira 1'], u2 = usdcByWallet['Carteira 2'];
+      document.getElementById('usdcC1').textContent = u1 > 0 ? u1.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
+      document.getElementById('usdcC2').textContent = u2 > 0 ? u2.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
+      document.getElementById('usdcTotalQty').textContent = (u1 + u2).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      document.getElementById('usdcUSD').textContent = fmtUSD2(u1 + u2);
+    } catch (e) { /* mantém o valor do snapshot nessa linha */ }
 
     aaveNet = walletNet;
     recomputeTotals();
