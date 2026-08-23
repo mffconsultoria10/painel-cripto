@@ -355,9 +355,11 @@
               ${p.auto ? '<span class="tag auto">🔗 detectada on-chain</span>' : ''}
               <span class="tag">${p.rede}</span>
               <span class="tag">${p.carteira}</span>
-              ${c.dias > 0 ? `<span class="tag">${c.dias} dia${c.dias === 1 ? '' : 's'} ativa</span>` : ''}
+              ${p.mintDateTime
+                ? `<span class="tag">Criada em ${p.mintDateTime}${c.dias > 0 ? ` · ${c.dias} dia${c.dias === 1 ? '' : 's'}` : ''}</span>`
+                : (c.dias > 0 ? `<span class="tag">${c.dias} dia${c.dias === 1 ? '' : 's'} ativa</span>` : '')}
+              ${p.nftId ? `<span class="tag">NFT #${p.nftId}</span>` : ''}
             </div>
-            ${p.mintDateTime ? `<div style="font-size:11.5px;color:var(--text-faint);margin-top:4px;">Criada em ${p.mintDateTime}${p.nftId ? ' · NFT #' + p.nftId : ''}</div>` : ''}
           </div>
           <div style="display:flex; align-items:center; gap:10px;">
             <span class="status-pill ${c.inRange ? 'good' : 'bad'}">${c.inRange ? 'Na faixa · captando taxas' : 'Fora da faixa · sem captar taxas'}</span>
@@ -494,21 +496,41 @@
     return s || '?';
   }
 
+  async function fetchJsonRetry(url, opts, attempts = 2) {
+    let lastErr;
+    for (let i = 0; i < attempts; i++) {
+      try {
+        const res = await fetch(url, opts);
+        return await res.json();
+      } catch (e) {
+        lastErr = e;
+        if (i < attempts - 1) await new Promise(r => setTimeout(r, 500 * (i + 1)));
+      }
+    }
+    throw lastErr;
+  }
+
   // Acha o evento IncreaseLiquidity mais antigo do NFT (o depósito inicial / criação da pool),
   // voltando no tempo em blocos de até 10 mil (limite dos nós públicos), até ~15 janelas.
+  // O resultado é um fato histórico imutável, então fica em cache local pra sempre.
   async function findMintEvent(logsRpc, posManager, tokenId) {
+    const cacheKey = `painel-cripto-mint-v1-${tokenId}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      const c = JSON.parse(cached);
+      return c === null ? null : { timestamp: c.timestamp, amount0: BigInt(c.amount0), amount1: BigInt(c.amount1) };
+    }
     const tokenIdTopic = '0x' + tokenId.toString(16).padStart(64, '0');
-    const bnRes = await fetch(logsRpc, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] }) });
-    let toBlockNum = parseInt((await bnRes.json()).result, 16);
+    const bnJson = await fetchJsonRetry(logsRpc, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] }) });
+    let toBlockNum = parseInt(bnJson.result, 16);
     const CHUNK = 9999, MAX_CHUNKS = 15;
     let matches = [];
     for (let i = 0; i < MAX_CHUNKS; i++) {
       const fromBlockNum = Math.max(0, toBlockNum - CHUNK);
-      const res = await fetch(logsRpc, {
+      const j = await fetchJsonRetry(logsRpc, {
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_getLogs', params: [{ address: posManager, fromBlock: '0x' + fromBlockNum.toString(16), toBlock: '0x' + toBlockNum.toString(16), topics: [INCREASE_LIQUIDITY_TOPIC, tokenIdTopic] }] }),
       });
-      const j = await res.json();
       if (j.result && j.result.length > 0) {
         matches.push(...j.result);
       } else if (matches.length > 0) {
@@ -517,29 +539,38 @@
       if (fromBlockNum === 0) break;
       toBlockNum = fromBlockNum - 1;
     }
-    if (matches.length === 0) return null;
+    if (matches.length === 0) return null; // não encontrado dentro da janela — não cacheia, tenta de novo na próxima
     matches.sort((a, b) => parseInt(a.blockNumber, 16) - parseInt(b.blockNumber, 16));
     const mint = matches[0];
     let ts;
     if (mint.blockTimestamp) {
       ts = parseInt(mint.blockTimestamp, 16);
     } else {
-      const blkRes = await fetch(logsRpc, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_getBlockByNumber', params: [mint.blockNumber, false] }) });
-      ts = parseInt((await blkRes.json()).result.timestamp, 16);
+      const blkJson = await fetchJsonRetry(logsRpc, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_getBlockByNumber', params: [mint.blockNumber, false] }) });
+      ts = parseInt(blkJson.result.timestamp, 16);
     }
     const data = mint.data.slice(2);
-    return { timestamp: ts, amount0: BigInt('0x' + data.slice(64, 128)), amount1: BigInt('0x' + data.slice(128, 192)) };
+    const amount0 = BigInt('0x' + data.slice(64, 128));
+    const amount1 = BigInt('0x' + data.slice(128, 192));
+    localStorage.setItem(cacheKey, JSON.stringify({ timestamp: ts, amount0: amount0.toString(), amount1: amount1.toString() }));
+    return { timestamp: ts, amount0, amount1 };
   }
 
   async function historicalPriceUSD(symbol, date) {
     const id = COINGECKO_ID[symbol];
     if (!id) return symbol === 'USDC' || symbol === 'USDT' || symbol === 'DAI' || symbol === 'USDbC' ? 1 : null;
+    const dateKey = date.toISOString().slice(0, 10);
+    const cacheKey = `painel-cripto-price-v1-${id}-${dateKey}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) return JSON.parse(cached);
     const dd = String(date.getUTCDate()).padStart(2, '0');
     const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
     const yyyy = date.getUTCFullYear();
     try {
-      const j = await fetch(`https://api.coingecko.com/api/v3/coins/${id}/history?date=${dd}-${mm}-${yyyy}`).then(r => r.json());
-      return j.market_data ? j.market_data.current_price.usd : null;
+      const j = await fetchJsonRetry(`https://api.coingecko.com/api/v3/coins/${id}/history?date=${dd}-${mm}-${yyyy}`);
+      const price = j.market_data ? j.market_data.current_price.usd : null;
+      if (price != null) localStorage.setItem(cacheKey, JSON.stringify(price));
+      return price;
     } catch (e) { return null; }
   }
 

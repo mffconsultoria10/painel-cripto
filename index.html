@@ -153,6 +153,8 @@
     text-align: right;
   }
   .fx-input-row input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .fx-input-row input[readonly] { background: var(--surface-2); color: var(--text-muted); cursor: default; }
+  .fx-input-row input[readonly]:focus { outline: none; }
   .fx-result { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; color: var(--accent-strong); }
 
   /* ---- Section headings ---- */
@@ -399,7 +401,7 @@
     <div class="hero-left">
       <div class="eyebrow"><span class="dot"></span>Painel consolidado · 2 carteiras · snapshot 22/08/2026</div>
       <h1 class="num" id="heroTotal">US$ 47.437</h1>
-      <span class="delta-pill down">▼ 2,95% nas últimas 24h</span>
+      <span class="delta-pill down" id="deltaPill">▼ 2,95% nas últimas 24h</span>
       <div class="hero-sub">Soma de saldo em carteira + posições líquidas em Aave V3 (fornecido − emprestado) das duas carteiras DeBank monitoradas.</div>
       <div class="live-note" id="liveNote" hidden>🟢 Posições Aave lidas agora mesmo, direto da blockchain — saldo em carteira ainda é do snapshot.</div>
     </div>
@@ -407,7 +409,7 @@
       <div class="fx-label">Câmbio USD → BRL <span id="fxLiveTag" class="live-badge" hidden>· dólar comercial ao vivo</span></div>
       <div class="fx-input-row">
         <span>R$</span>
-        <input id="fx" type="text" inputmode="decimal" value="5,20">
+        <input id="fx" type="text" inputmode="decimal" value="5,20" readonly>
         <span>/ US$</span>
       </div>
       <div class="fx-result" id="fxResult">R$ 246.632</div>
@@ -423,7 +425,7 @@
           <div class="wcard-name">Carteira 1</div>
           <div class="wcard-addr">0x2af9…2a47</div>
         </div>
-        <span class="delta-pill down">▼ 2,98%</span>
+        <span class="delta-pill down" id="w1DeltaPill">▼ 2,98%</span>
       </div>
       <div class="wcard-total num" id="w1Total">US$ 43.379</div>
       <div class="chainbar">
@@ -446,7 +448,7 @@
           <div class="wcard-name">Carteira 2</div>
           <div class="wcard-addr">0x68f0…2072</div>
         </div>
-        <span class="delta-pill down">▼ 2,59%</span>
+        <span class="delta-pill down" id="w2DeltaPill">▼ 2,59%</span>
       </div>
       <div class="wcard-total num" id="w2Total">US$ 4.058</div>
       <div class="chainbar">
@@ -761,6 +763,9 @@
   };
   // Poeira sem valor relevante para mapear (MON, WGC, MM.Finance) — fica no valor do snapshot.
   const SPOT_STATIC = { 'Carteira 1': 29.61, 'Carteira 2': 0.03 };
+  // BTC e ETH somando carteira + colateral no Aave, mesma base da tabela de exposição consolidada —
+  // usado para aproximar a variação de 24h do patrimônio a partir da variação do BTC/ETH.
+  const BTC_QTY_TOTAL = 0.6374, ETH_QTY_TOTAL = 4.5402;
   // Parte do saldo em carteira coberta pela leitura ao vivo (cbBTC/WBTC, ETH/WETH, POL, SOL, UNI, HYPE) — começa com o valor do snapshot e é atualizada por refreshSpotLive().
   let spotLive = { 'Carteira 1': 16844 - 29.61, 'Carteira 2': 1284 - 0.03 };
   let aaveNet = { 'Carteira 1': 14669 + 11866, 'Carteira 2': 1700 + 1072 };
@@ -877,7 +882,7 @@
 
   async function refreshSpotLive() {
     const w1 = AAVE_WALLETS['Carteira 1'], w2 = AAVE_WALLETS['Carteira 2'];
-    const priceData = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,polygon-ecosystem-token,solana,uniswap,hyperliquid&vs_currencies=usd').then(r => r.json());
+    const priceData = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,polygon-ecosystem-token,solana,uniswap,hyperliquid&vs_currencies=usd&include_24hr_change=true').then(r => r.json());
     const btcPrice = priceData.bitcoin.usd;
     const ethPrice = priceData.ethereum.usd;
     const polPrice = (priceData['polygon-ecosystem-token'] || {}).usd || 0.1041;
@@ -921,7 +926,28 @@
 
     recomputeTotals();
     document.getElementById('spotLiveBadge').hidden = false;
+
+    // Variação 24h ponderada por BTC/ETH (carteira + Aave) — dominam a exposição, então aproxima bem a
+    // variação real do patrimônio sem exigir histórico de preço de cada ativo secundário.
+    const btc24h = priceData.bitcoin.usd_24h_change;
+    const eth24h = priceData.ethereum.usd_24h_change;
+    if (typeof btc24h === 'number' && typeof eth24h === 'number') {
+      const btcExposureUSD = BTC_QTY_TOTAL * btcPrice;
+      const ethExposureUSD = ETH_QTY_TOTAL * ethPrice;
+      const blended = (btcExposureUSD * btc24h + ethExposureUSD * eth24h) / (btcExposureUSD + ethExposureUSD);
+      setDeltaPill('deltaPill', blended, ' nas últimas 24h (aprox. BTC/ETH)');
+      setDeltaPill('w1DeltaPill', blended, '');
+      setDeltaPill('w2DeltaPill', blended, '');
+    }
+
     onLiveSuccess();
+  }
+
+  function setDeltaPill(id, pct, suffix) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = 'delta-pill ' + (pct >= 0 ? 'up' : 'down');
+    el.textContent = (pct >= 0 ? '▲ +' : '▼ ') + Math.abs(pct).toFixed(2).replace('.', ',') + '%' + suffix;
   }
 
   function onLiveSuccess() {
