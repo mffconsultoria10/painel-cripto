@@ -404,7 +404,7 @@
       <div class="live-note" id="liveNote" hidden>🟢 Posições Aave lidas agora mesmo, direto da blockchain — saldo em carteira ainda é do snapshot.</div>
     </div>
     <div class="fx-box">
-      <div class="fx-label">Câmbio USD → BRL</div>
+      <div class="fx-label">Câmbio USD → BRL <span id="fxLiveTag" class="live-badge" hidden>· dólar comercial ao vivo</span></div>
       <div class="fx-input-row">
         <span>R$</span>
         <input id="fx" type="text" inputmode="decimal" value="5,20">
@@ -694,6 +694,19 @@
   }
   fxInput.addEventListener('input', update);
   update();
+
+  // ---- Câmbio USD/BRL (dólar comercial) ao vivo — o campo continua editável manualmente ----
+  async function refreshFx() {
+    const j = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL').then(r => r.json());
+    const rate = parseFloat(j.USDBRL.bid);
+    if (!rate) throw new Error('cotação inválida');
+    fxInput.value = rate.toFixed(4).replace('.', ',');
+    document.getElementById('fxLiveTag').hidden = false;
+    update();
+  }
+  refreshFx().catch(() => {
+    // Bloqueado (sandbox do Artifact) ou sem rede — mantém o valor manual do campo.
+  });
 
   const REQUEST_TEXT = 'Atualiza o painel cripto inteiro';
   let toastTimer = null;

@@ -225,7 +225,7 @@
   </div>
 
   <footer>
-    Posições marcadas "detectada on-chain" vêm direto do contrato NonfungiblePositionManager da Uniswap V3 (Arbitrum, Base e outras redes) para as carteiras 1 e 2, lidas sob pedido — a página em si não faz essa consulta sozinha ao carregar, por restrição de segurança do navegador. Impermanent loss estimado pela fórmula padrão (2·√k / (1+k) − 1, onde k é a razão entre o preço atual e o preço de entrada), aplicado sobre o valor investido — uma aproximação, não o valor exato do protocolo. Rentabilidade total = (valor atual + taxas coletadas − valor investido) / valor investido; rentabilidade média diária é essa rentabilidade dividida pelos dias ativos (média simples, não composta). Pools adicionadas manualmente ficam salvas apenas no armazenamento local deste navegador.
+    Posições marcadas "detectada on-chain" vêm direto do contrato NonfungiblePositionManager da Uniswap V3 (Arbitrum, Base e outras redes) para as carteiras 1 e 2, lidas sob pedido — a página em si não faz essa consulta sozinha ao carregar, por restrição de segurança do navegador. Data de criação e valor investido vêm do evento de depósito inicial da posição (IncreaseLiquidity) buscado retroativamente na blockchain (até ~15 janelas de 10 mil blocos, o que cobre alguns dias de histórico nos nós públicos gratuitos); posições mais antigas que isso ficam com valor investido zerado até você completar manualmente. O preço de cada ativo na data de criação vem do histórico diário da CoinGecko. Impermanent loss estimado pela fórmula padrão (2·√k / (1+k) − 1, onde k é a razão entre o preço atual e o preço de entrada), aplicado sobre o valor investido — uma aproximação, não o valor exato do protocolo. Rentabilidade total = (valor atual + taxas coletadas − valor investido) / valor investido; rentabilidade média diária é essa rentabilidade dividida pelos dias ativos (média simples, não composta). Pools adicionadas manualmente ficam salvas apenas no armazenamento local deste navegador.
   </footer>
 
 </div>
@@ -357,6 +357,7 @@
               <span class="tag">${p.carteira}</span>
               ${c.dias > 0 ? `<span class="tag">${c.dias} dia${c.dias === 1 ? '' : 's'} ativa</span>` : ''}
             </div>
+            ${p.mintDateTime ? `<div style="font-size:11.5px;color:var(--text-faint);margin-top:4px;">Criada em ${p.mintDateTime}${p.nftId ? ' · NFT #' + p.nftId : ''}</div>` : ''}
           </div>
           <div style="display:flex; align-items:center; gap:10px;">
             <span class="status-pill ${c.inRange ? 'good' : 'bad'}">${c.inRange ? 'Na faixa · captando taxas' : 'Fora da faixa · sem captar taxas'}</span>
@@ -398,7 +399,8 @@
             <div class="mini-stat"><div class="k">Rentabilidade total</div><div class="v num ${c.rentTotalPct >= 0 ? 'good' : 'bad'}">${fmtPct(c.rentTotalPct)}</div></div>
             <div class="mini-stat"><div class="k">Média diária</div><div class="v num ${c.rentDiaPct >= 0 ? 'good' : 'bad'}">${fmtPct(c.rentDiaPct)}</div></div>
           </div>
-          ${p.auto ? `<div style="font-size:12px;color:var(--text-faint)">${p.usdEstimated ? `Sem cotação USD para ${p.tokenA} — valores em termos de ${p.tokenB}.` : ''} Clique no lápis para adicionar valor investido, preço de entrada e data de abertura e liberar IL e rentabilidade reais.</div>` : ''}
+          ${p.auto && p.usdEstimated ? `<div style="font-size:12px;color:var(--text-faint)">Sem cotação USD para ${p.tokenA} ou ${p.tokenB} — valores em termos de ${p.tokenB}.</div>` : ''}
+          ${p.auto && p.investido === 0 ? `<div style="font-size:12px;color:var(--text-faint)">Não encontrei o depósito inicial on-chain (posição muito antiga para o histórico gratuito) — clique no lápis para completar valor investido, preço de entrada e data manualmente.</div>` : ''}
         </div>
       `;
       list.appendChild(card);
@@ -450,10 +452,14 @@
 
   // ---- Detecção ao vivo de posições Uniswap V3 (funciona quando hospedado fora do sandbox do Artifact) ----
   const UNI_CHAINS = {
-    Arbitrum: { rpc: 'https://arbitrum-one-rpc.publicnode.com', posManager: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88', factory: '0x1F98431c8aD98523631AE4a59f267346ea31F984' },
-    Base:     { rpc: 'https://base.publicnode.com',             posManager: '0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1', factory: '0x33128a8fC17869897dcE68Ed026d694621f6FDfD' },
-    Polygon:  { rpc: 'https://polygon-bor-rpc.publicnode.com',   posManager: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88', factory: '0x1F98431c8aD98523631AE4a59f267346ea31F984' },
+    // logsRpc: nó oficial de cada rede, único que aceita eth_getLogs histórico sem conta/chave
+    // (o publicnode usado no resto do app limita getLogs a poucos minutos de histórico).
+    Arbitrum: { rpc: 'https://arbitrum-one-rpc.publicnode.com', logsRpc: 'https://arb1.arbitrum.io/rpc',      posManager: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88', factory: '0x1F98431c8aD98523631AE4a59f267346ea31F984' },
+    Base:     { rpc: 'https://base.publicnode.com',             logsRpc: 'https://mainnet.base.org',           posManager: '0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1', factory: '0x33128a8fC17869897dcE68Ed026d694621f6FDfD' },
+    Polygon:  { rpc: 'https://polygon-bor-rpc.publicnode.com',   logsRpc: 'https://polygon-bor-rpc.publicnode.com', posManager: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88', factory: '0x1F98431c8aD98523631AE4a59f267346ea31F984' },
   };
+  const INCREASE_LIQUIDITY_TOPIC = '0x3067048beee31b25b2f1681f88dac838c8bba36af25bfb2b7cf7473a5847e35f';
+  const COINGECKO_ID = { WBTC: 'bitcoin', cbBTC: 'bitcoin', BTC: 'bitcoin', WETH: 'ethereum', ETH: 'ethereum' };
   const UNI_WALLETS = { 'Carteira 1': '0x2af9997fc77e50a3cde92b6452ee2faa0ddf2a47', 'Carteira 2': '0x68f0271fd7d9813f951419a1108fc1c9c0ba2072' };
 
   function padHexU(h) { return h.padStart(64, '0'); }
@@ -486,6 +492,55 @@
     let s = '';
     for (let i = 0; i < 64; i += 2) { const b = parseInt(clean.slice(i, i + 2), 16); if (!b) break; s += String.fromCharCode(b); }
     return s || '?';
+  }
+
+  // Acha o evento IncreaseLiquidity mais antigo do NFT (o depósito inicial / criação da pool),
+  // voltando no tempo em blocos de até 10 mil (limite dos nós públicos), até ~15 janelas.
+  async function findMintEvent(logsRpc, posManager, tokenId) {
+    const tokenIdTopic = '0x' + tokenId.toString(16).padStart(64, '0');
+    const bnRes = await fetch(logsRpc, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] }) });
+    let toBlockNum = parseInt((await bnRes.json()).result, 16);
+    const CHUNK = 9999, MAX_CHUNKS = 15;
+    let matches = [];
+    for (let i = 0; i < MAX_CHUNKS; i++) {
+      const fromBlockNum = Math.max(0, toBlockNum - CHUNK);
+      const res = await fetch(logsRpc, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_getLogs', params: [{ address: posManager, fromBlock: '0x' + fromBlockNum.toString(16), toBlock: '0x' + toBlockNum.toString(16), topics: [INCREASE_LIQUIDITY_TOPIC, tokenIdTopic] }] }),
+      });
+      const j = await res.json();
+      if (j.result && j.result.length > 0) {
+        matches.push(...j.result);
+      } else if (matches.length > 0) {
+        break; // já achamos e essa janela mais antiga veio vazia: não tem historico antes disso
+      }
+      if (fromBlockNum === 0) break;
+      toBlockNum = fromBlockNum - 1;
+    }
+    if (matches.length === 0) return null;
+    matches.sort((a, b) => parseInt(a.blockNumber, 16) - parseInt(b.blockNumber, 16));
+    const mint = matches[0];
+    let ts;
+    if (mint.blockTimestamp) {
+      ts = parseInt(mint.blockTimestamp, 16);
+    } else {
+      const blkRes = await fetch(logsRpc, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_getBlockByNumber', params: [mint.blockNumber, false] }) });
+      ts = parseInt((await blkRes.json()).result.timestamp, 16);
+    }
+    const data = mint.data.slice(2);
+    return { timestamp: ts, amount0: BigInt('0x' + data.slice(64, 128)), amount1: BigInt('0x' + data.slice(128, 192)) };
+  }
+
+  async function historicalPriceUSD(symbol, date) {
+    const id = COINGECKO_ID[symbol];
+    if (!id) return symbol === 'USDC' || symbol === 'USDT' || symbol === 'DAI' || symbol === 'USDbC' ? 1 : null;
+    const dd = String(date.getUTCDate()).padStart(2, '0');
+    const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const yyyy = date.getUTCFullYear();
+    try {
+      const j = await fetch(`https://api.coingecko.com/api/v3/coins/${id}/history?date=${dd}-${mm}-${yyyy}`).then(r => r.json());
+      return j.market_data ? j.market_data.current_price.usd : null;
+    } catch (e) { return null; }
   }
 
   async function detectPoolsLive() {
@@ -572,12 +627,33 @@
           const valorB = hasUsd ? amount1 * price1USD : amount1;
           const taxasUsd = hasUsd ? (owed0 * price0USD + owed1 * price1USD) : (owed0 * curPrice + owed1);
 
+          // Data de criação + depósito inicial (valor investido) via evento IncreaseLiquidity mais antigo.
+          let dataAbertura = '', entrada = curPrice, investido = 0, mintDateTime = '';
+          try {
+            const mint = await findMintEvent(cfg.logsRpc, cfg.posManager, pos.tid);
+            if (mint) {
+              const mintDate = new Date(mint.timestamp * 1000);
+              dataAbertura = mintDate.toISOString().slice(0, 10);
+              mintDateTime = mintDate.toLocaleString('pt-BR', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' UTC';
+              const mintAmount0 = Number(mint.amount0) / Math.pow(10, dec0);
+              const mintAmount1 = Number(mint.amount1) / Math.pow(10, dec1);
+              const [histPrice0, histPrice1] = await Promise.all([
+                historicalPriceUSD(symbol0, mintDate),
+                historicalPriceUSD(symbol1, mintDate),
+              ]);
+              if (histPrice0 != null && histPrice1 != null) {
+                investido = mintAmount0 * histPrice0 + mintAmount1 * histPrice1;
+                entrada = histPrice1 > 0 ? histPrice0 / histPrice1 : curPrice;
+              }
+            }
+          } catch (e) { /* sem histórico disponível — segue com investido em US$ 0, editável manualmente */ }
+
           found.push({
             id: `auto-${chainName}-${pos.tid}`,
             tokenA: symbol0, tokenB: symbol1,
             rede: chainName, carteira: walletId,
-            data: '', min: minPrice, max: maxPrice, entrada: curPrice, atual: curPrice,
-            investido: 0, valorA, valorB, taxas: taxasUsd,
+            data: dataAbertura, mintDateTime, nftId: pos.tid, min: minPrice, max: maxPrice, entrada, atual: curPrice,
+            investido, valorA, valorB, taxas: taxasUsd,
             usdEstimated: !hasUsd,
           });
         }
