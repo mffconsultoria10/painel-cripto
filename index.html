@@ -587,7 +587,7 @@
   <div>
     <div class="section-head">
       <h2>Exposição consolidada por ativo</h2>
-      <span class="hint">Carteira + colateral fornecido no Aave, somando as duas carteiras</span>
+      <span class="hint">Carteira + colateral fornecido no Aave + pools de liquidez, somando as duas carteiras</span>
     </div>
     <div class="table-scroll" style="margin-top:14px">
       <table>
@@ -650,6 +650,13 @@
             <td class="num" style="font-weight:600">299,59</td>
             <td class="num" style="font-weight:600">US$ 299,59</td>
           </tr>
+          <tr id="poolsRow" style="display:none">
+            <td class="asset"><span class="asset-dot" style="background:#5b8def"></span>Em pools de liquidez (Uniswap V3)</td>
+            <td class="num" id="poolsC1">—</td>
+            <td class="num" id="poolsC2">—</td>
+            <td class="num" style="font-weight:600" id="poolsTotalQty">—</td>
+            <td class="num" style="font-weight:600" id="poolsUSD">US$ 0</td>
+          </tr>
           <tr>
             <td class="asset" style="color:var(--bad)"><span class="asset-dot" style="background:var(--bad)"></span>USDC emprestado (passivo Aave)</td>
             <td class="num" style="color:var(--bad)">− 12.134,99</td>
@@ -659,7 +666,7 @@
           </tr>
           <tr class="total">
             <td colspan="4">Patrimônio líquido total</td>
-            <td class="num">US$ 47.437</td>
+            <td class="num" id="rollupTotal">US$ 47.437</td>
           </tr>
         </tbody>
       </table>
@@ -769,15 +776,17 @@
   // Parte do saldo em carteira coberta pela leitura ao vivo (cbBTC/WBTC, ETH/WETH, POL, SOL, UNI, HYPE) — começa com o valor do snapshot e é atualizada por refreshSpotLive().
   let spotLive = { 'Carteira 1': 16844 - 29.61, 'Carteira 2': 1284 - 0.03 };
   let aaveNet = { 'Carteira 1': 14669 + 11866, 'Carteira 2': 1700 + 1072 };
+  let poolsLive = { 'Carteira 1': 0, 'Carteira 2': 0 }; // valor em pools Uniswap V3, somado quando detectado
 
   function recomputeTotals() {
-    const w1 = SPOT_STATIC['Carteira 1'] + spotLive['Carteira 1'] + aaveNet['Carteira 1'];
-    const w2 = SPOT_STATIC['Carteira 2'] + spotLive['Carteira 2'] + aaveNet['Carteira 2'];
+    const w1 = SPOT_STATIC['Carteira 1'] + spotLive['Carteira 1'] + aaveNet['Carteira 1'] + poolsLive['Carteira 1'];
+    const w2 = SPOT_STATIC['Carteira 2'] + spotLive['Carteira 2'] + aaveNet['Carteira 2'] + poolsLive['Carteira 2'];
     document.getElementById('w1Total').textContent = fmtUSD0(w1);
     document.getElementById('w2Total').textContent = fmtUSD0(w2);
     document.getElementById('w1SpotTotal').textContent = fmtUSD0(SPOT_STATIC['Carteira 1'] + spotLive['Carteira 1']);
     document.getElementById('w2SpotTotal').textContent = fmtUSD0(SPOT_STATIC['Carteira 2'] + spotLive['Carteira 2']);
     document.getElementById('heroTotal').textContent = fmtUSD0(w1 + w2);
+    document.getElementById('rollupTotal').textContent = fmtUSD0(w1 + w2);
     totals.combined = w1 + w2; totals.w1 = w1; totals.w2 = w2;
     update();
   }
@@ -958,6 +967,113 @@
     liveMode = true;
   }
 
-  Promise.allSettled([refreshAaveLive(), refreshSpotLive()]);
-  // Se ambas falharem (sandbox do Artifact ou sem rede), a página mantém o snapshot e o botão de pedir atualização ao Claude.
+  // ---- Pools de liquidez Uniswap V3 (mesma técnica da página de pools) — soma ao patrimônio total ----
+  const UNI_CHAINS = {
+    Arbitrum: { rpc: 'https://arbitrum-one-rpc.publicnode.com', posManager: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88', factory: '0x1F98431c8aD98523631AE4a59f267346ea31F984' },
+    Base:     { rpc: 'https://base.publicnode.com',             posManager: '0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1', factory: '0x33128a8fC17869897dcE68Ed026d694621f6FDfD' },
+    Polygon:  { rpc: 'https://polygon-bor-rpc.publicnode.com',   posManager: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88', factory: '0x1F98431c8aD98523631AE4a59f267346ea31F984' },
+  };
+  function decodeSignedWord(hex64) {
+    const v = BigInt('0x' + hex64);
+    return Number(v >= (2n ** 255n) ? v - (2n ** 256n) : v);
+  }
+  function decodeAsciiString(hex) {
+    if (!hex) return '?';
+    const clean = hex.slice(2);
+    try {
+      const len = parseInt(clean.slice(64, 128), 16);
+      if (len > 0 && len < 64) {
+        let s = '';
+        for (let i = 0; i < len * 2; i += 2) s += String.fromCharCode(parseInt(clean.slice(128 + i, 130 + i), 16));
+        if (s.trim()) return s;
+      }
+    } catch (e) { /* tenta bytes32 abaixo */ }
+    let s = '';
+    for (let i = 0; i < 64; i += 2) { const b = parseInt(clean.slice(i, i + 2), 16); if (!b) break; s += String.fromCharCode(b); }
+    return s || '?';
+  }
+  async function ethCallBatch(rpc, calls) {
+    if (calls.length === 0) return {};
+    const body = JSON.stringify(calls.map(c => ({ jsonrpc: '2.0', id: c.id, method: 'eth_call', params: [{ to: c.to, data: c.data }, 'latest'] })));
+    const res = await fetch(rpc, { method: 'POST', headers: { 'content-type': 'application/json' }, body });
+    const arr = await res.json();
+    const map = {};
+    (Array.isArray(arr) ? arr : [arr]).forEach(r => { map[r.id] = r.result; });
+    return map;
+  }
+
+  async function refreshPoolsLive() {
+    const priceData = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd').then(r => r.json());
+    const priceMap = { WBTC: priceData.bitcoin.usd, cbBTC: priceData.bitcoin.usd, BTC: priceData.bitcoin.usd, WETH: priceData.ethereum.usd, ETH: priceData.ethereum.usd, USDC: 1, USDT: 1, DAI: 1, USDbC: 1 };
+
+    for (const [walletId, owner] of Object.entries(AAVE_WALLETS)) {
+      let walletUSD = 0;
+      for (const [chainName, cfg] of Object.entries(UNI_CHAINS)) {
+        const balRes = await ethCallBatch(cfg.rpc, [{ id: 'b', to: cfg.posManager, data: '0x70a08231' + padHex(owner.slice(2).toLowerCase()) }]);
+        const n = parseInt(balRes.b, 16) || 0;
+        if (n === 0) continue;
+        const idxCalls = [];
+        for (let i = 0; i < n; i++) idxCalls.push({ id: i, to: cfg.posManager, data: '0x2f745c59' + padHex(owner.slice(2).toLowerCase()) + padHex(i.toString(16)) });
+        const idxRes = await ethCallBatch(cfg.rpc, idxCalls);
+        const tokenIds = [];
+        for (let i = 0; i < n; i++) if (idxRes[i]) tokenIds.push(parseInt(idxRes[i], 16));
+        const posCalls = tokenIds.map((tid, i) => ({ id: i, to: cfg.posManager, data: '0x99fbab88' + padHex(tid.toString(16)) }));
+        const posRes = await ethCallBatch(cfg.rpc, posCalls);
+        const active = [];
+        tokenIds.forEach((tid, i) => {
+          const r = posRes[i];
+          if (!r) return;
+          const hex = r.slice(2);
+          const liquidity = BigInt('0x' + hex.slice(224 * 2, 224 * 2 + 64));
+          if (liquidity === 0n) return;
+          active.push({
+            token0: '0x' + hex.slice(64 * 2, 64 * 2 + 64).slice(24),
+            token1: '0x' + hex.slice(96 * 2, 96 * 2 + 64).slice(24),
+            fee: parseInt(hex.slice(128 * 2, 128 * 2 + 64), 16),
+            tickLower: decodeSignedWord(hex.slice(160 * 2, 160 * 2 + 64)),
+            tickUpper: decodeSignedWord(hex.slice(192 * 2, 192 * 2 + 64)),
+            liquidity,
+          });
+        });
+        for (const pos of active) {
+          const poolData = '0x1698ee82' + padHex(pos.token0.slice(2)) + padHex(pos.token1.slice(2)) + padHex(pos.fee.toString(16));
+          const poolRes = await ethCallBatch(cfg.rpc, [{ id: 'pool', to: cfg.factory, data: poolData }]);
+          const poolAddr = '0x' + poolRes.pool.slice(-40);
+          const metaRes = await ethCallBatch(cfg.rpc, [
+            { id: 'slot0', to: poolAddr, data: '0x3850c7bd' },
+            { id: 'sym0', to: pos.token0, data: '0x95d89b41' },
+            { id: 'dec0', to: pos.token0, data: '0x313ce567' },
+            { id: 'sym1', to: pos.token1, data: '0x95d89b41' },
+            { id: 'dec1', to: pos.token1, data: '0x313ce567' },
+          ]);
+          const currentTick = decodeSignedWord(metaRes.slot0.slice(2).slice(64, 128));
+          const symbol0 = decodeAsciiString(metaRes.sym0), symbol1 = decodeAsciiString(metaRes.sym1);
+          const dec0 = parseInt(metaRes.dec0, 16), dec1 = parseInt(metaRes.dec1, 16);
+          const L = Number(pos.liquidity);
+          const sqrtL = Math.pow(1.0001, pos.tickLower / 2), sqrtU = Math.pow(1.0001, pos.tickUpper / 2), sqrtC = Math.pow(1.0001, currentTick / 2);
+          let raw0 = 0, raw1 = 0;
+          if (currentTick <= pos.tickLower) raw0 = L * (1 / sqrtL - 1 / sqrtU);
+          else if (currentTick >= pos.tickUpper) raw1 = L * (sqrtU - sqrtL);
+          else { raw0 = L * (1 / sqrtC - 1 / sqrtU); raw1 = L * (sqrtC - sqrtL); }
+          const amount0 = raw0 / Math.pow(10, dec0), amount1 = raw1 / Math.pow(10, dec1);
+          const price0 = priceMap[symbol0], price1 = priceMap[symbol1];
+          if (price0 != null && price1 != null) walletUSD += amount0 * price0 + amount1 * price1;
+        }
+      }
+      poolsLive[walletId] = walletUSD;
+    }
+
+    const p1 = poolsLive['Carteira 1'], p2 = poolsLive['Carteira 2'];
+    if (p1 + p2 > 0) {
+      document.getElementById('poolsRow').style.display = '';
+      document.getElementById('poolsC1').textContent = p1 > 0 ? fmtUSD0(p1) : '—';
+      document.getElementById('poolsC2').textContent = p2 > 0 ? fmtUSD0(p2) : '—';
+      document.getElementById('poolsTotalQty').textContent = fmtUSD0(p1 + p2);
+      document.getElementById('poolsUSD').textContent = fmtUSD0(p1 + p2);
+    }
+    recomputeTotals();
+  }
+
+  Promise.allSettled([refreshAaveLive(), refreshSpotLive(), refreshPoolsLive()]);
+  // Se todas falharem (sandbox do Artifact ou sem rede), a página mantém o snapshot e o botão de pedir atualização ao Claude.
 </script>
