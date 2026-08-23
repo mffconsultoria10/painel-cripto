@@ -1,0 +1,419 @@
+<title>Simulador de Patrimônio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #f5f2ea;
+    --surface: #ffffff;
+    --surface-2: #efe9db;
+    --border: #ddd4bf;
+    --text: #23241f;
+    --text-muted: #6c6558;
+    --text-faint: #9a9384;
+    --accent: #a9772f;
+    --accent-soft: #a9772f1a;
+    --accent-strong: #7c5620;
+    --good: #2f7d5c;
+    --good-soft: #2f7d5c1a;
+    --warn: #b9822c;
+    --warn-soft: #b9822c1a;
+    --bad: #b0432f;
+    --bad-soft: #b0432f1a;
+    --shadow: 0 1px 2px rgba(35,32,25,0.06), 0 8px 24px -12px rgba(35,32,25,0.18);
+    --track: #e4dcc8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #16151a; --surface: #1e1c22; --surface-2: #26232b; --border: #34303a;
+      --text: #ede9e2; --text-muted: #a29c8f; --text-faint: #726c62;
+      --accent: #d6a24f; --accent-soft: #d6a24f22; --accent-strong: #eab868;
+      --good: #5cba8f; --good-soft: #5cba8f22; --warn: #d9a94f; --warn-soft: #d9a94f22;
+      --bad: #dd7862; --bad-soft: #dd786222;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 28px -12px rgba(0,0,0,0.55);
+      --track: #34303a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #16151a; --surface: #1e1c22; --surface-2: #26232b; --border: #34303a;
+    --text: #ede9e2; --text-muted: #a29c8f; --text-faint: #726c62;
+    --accent: #d6a24f; --accent-soft: #d6a24f22; --accent-strong: #eab868;
+    --good: #5cba8f; --good-soft: #5cba8f22; --warn: #d9a94f; --warn-soft: #d9a94f22;
+    --bad: #dd7862; --bad-soft: #dd786222;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 28px -12px rgba(0,0,0,0.55);
+    --track: #34303a;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
+    font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 40px 24px 80px; display: flex; flex-direction: column; gap: 32px; }
+  .num { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+  .topnav { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .nav-links { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; padding: 9px 15px; border-radius: 9px;
+    font-size: 13.5px; font-weight: 600; font-family: 'Sora', sans-serif; cursor: pointer;
+    text-decoration: none; border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    box-shadow: var(--shadow);
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent-strong); }
+  .btn.ghost { background: transparent; box-shadow: none; }
+  .btn svg { width: 15px; height: 15px; flex: none; }
+  .sub-brl { display: block; font-size: 11px; color: var(--text-faint); font-weight: 500; margin-top: 1px; }
+  .eyebrow {
+    display: flex; align-items: center; gap: 10px; font-size: 12.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text-muted); font-weight: 600;
+  }
+  .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+  h1 {
+    font-family: 'Fraunces', Georgia, serif; font-weight: 600;
+    font-size: clamp(1.9rem, 3.4vw, 2.5rem); margin: 6px 0 4px; letter-spacing: -0.01em; text-wrap: balance;
+  }
+  .lede { color: var(--text-muted); font-size: 14px; max-width: 62ch; }
+
+  /* controls */
+  .controls-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+  .control-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 18px 20px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 10px;
+  }
+  .control-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .control-label { font-weight: 600; font-size: 13.5px; }
+  .control-value { font-family: 'Fraunces', serif; font-weight: 600; font-size: 20px; color: var(--accent-strong); }
+  input[type="range"] {
+    -webkit-appearance: none; width: 100%; height: 4px; border-radius: 4px; background: var(--track); outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 17px; height: 17px; border-radius: 50%;
+    background: var(--accent); border: 3px solid var(--surface); box-shadow: 0 0 0 1px var(--accent); cursor: pointer;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 17px; height: 17px; border-radius: 50%; background: var(--accent);
+    border: 3px solid var(--surface); box-shadow: 0 0 0 1px var(--accent); cursor: pointer;
+  }
+  .range-scale { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-faint); }
+  .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+  .chip {
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--text-muted);
+    font-size: 12px; font-weight: 600; padding: 4px 9px; border-radius: 100px; cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--accent-strong); }
+  .chip.reset { margin-left: auto; }
+
+  /* result hero */
+  .result-hero {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 28px 28px; box-shadow: var(--shadow);
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 20px;
+  }
+  .result-total { font-family: 'Fraunces', serif; font-weight: 600; font-size: clamp(2.2rem, 4.5vw, 3rem); line-height: 1; }
+  .result-brl { color: var(--text-muted); font-size: 15px; margin-top: 6px; }
+  .delta-pill {
+    display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 100px;
+    font-size: 13px; font-weight: 600; width: fit-content; margin-top: 10px;
+  }
+  .delta-pill.down { background: var(--bad-soft); color: var(--bad); }
+  .delta-pill.up { background: var(--good-soft); color: var(--good); }
+  .delta-pill.flat { background: var(--surface-2); color: var(--text-muted); }
+
+  .risk-callout {
+    display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 12px;
+    font-size: 13.5px; font-weight: 600; min-width: 220px;
+  }
+  .risk-callout.good { background: var(--good-soft); color: var(--good); }
+  .risk-callout.warn { background: var(--warn-soft); color: var(--warn); }
+  .risk-callout.bad { background: var(--bad-soft); color: var(--bad); }
+  .risk-callout .hf-num { font-family: 'IBM Plex Mono', monospace; font-size: 17px; }
+
+  /* section */
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .section-head h2 { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 600; margin: 0; }
+  .section-head .hint { font-size: 12.5px; color: var(--text-faint); }
+
+  .table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); }
+  table { width: 100%; border-collapse: collapse; min-width: 520px; }
+  thead th {
+    text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-faint); font-weight: 600; padding: 12px 16px; border-bottom: 1px solid var(--border);
+    background: var(--surface-2); white-space: nowrap;
+  }
+  thead th.num, tbody td.num { text-align: right; }
+  tbody td { padding: 11px 16px; border-bottom: 1px solid var(--border); font-size: 14px; white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr.total td { font-weight: 600; background: var(--surface-2); }
+  td.asset { font-weight: 500; }
+  td.muted { color: var(--text-faint); }
+
+  .hf-pill {
+    display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 100px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600;
+  }
+  .hf-pill.good { background: var(--good-soft); color: var(--good); }
+  .hf-pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .hf-pill.bad { background: var(--bad-soft); color: var(--bad); }
+
+  footer {
+    border-top: 1px solid var(--border); padding-top: 20px; font-size: 12.5px; color: var(--text-faint);
+    max-width: 80ch;
+  }
+</style>
+
+<div class="wrap">
+
+  <div class="topnav">
+    <div class="nav-links">
+      <a class="btn" id="navBack" href="https://claude.ai/code/artifact/b289e48a-22c2-4ffa-9eff-5d95356e1879">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        Voltar ao painel
+      </a>
+      <a class="btn ghost" id="navPools" href="https://claude.ai/code/artifact/0578293c-9dff-416c-864e-1db750c55f90">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
+        Pools de liquidez
+      </a>
+    </div>
+    <div class="eyebrow"><span class="dot"></span>Baseado no snapshot de 22/08/2026</div>
+  </div>
+
+  <div>
+    <h1>Simulador de patrimônio</h1>
+    <p class="lede">Ajuste o preço do BTC, do ETH e a cotação do dólar para ver como o patrimônio total e a saúde das 4 posições no Aave V3 reagiriam. Os demais ativos (SOL, POL, UNI, HYPE e saldos residuais) são mantidos constantes em US$ 564,47.</p>
+  </div>
+
+  <div class="controls-grid">
+
+    <div class="control-card">
+      <div class="control-head">
+        <span class="control-label">Preço do BTC</span>
+        <span class="control-value num" id="btcVal">US$ 77.047</span>
+      </div>
+      <input type="range" id="btcRange" min="15000" max="220000" step="500" value="77047">
+      <div class="range-scale"><span>15.000</span><span>220.000</span></div>
+      <div class="chip-row">
+        <span class="chip" data-target="btc" data-pct="-0.5">-50%</span>
+        <span class="chip" data-target="btc" data-pct="-0.3">-30%</span>
+        <span class="chip" data-target="btc" data-pct="-0.15">-15%</span>
+        <span class="chip" data-target="btc" data-pct="0.15">+15%</span>
+        <span class="chip" data-target="btc" data-pct="0.5">+50%</span>
+        <span class="chip" data-target="btc" data-pct="1">+100%</span>
+      </div>
+    </div>
+
+    <div class="control-card">
+      <div class="control-head">
+        <span class="control-label">Preço do ETH</span>
+        <span class="control-value num" id="ethVal">US$ 2.415</span>
+      </div>
+      <input type="range" id="ethRange" min="400" max="10000" step="25" value="2415">
+      <div class="range-scale"><span>400</span><span>10.000</span></div>
+      <div class="chip-row">
+        <span class="chip" data-target="eth" data-pct="-0.5">-50%</span>
+        <span class="chip" data-target="eth" data-pct="-0.3">-30%</span>
+        <span class="chip" data-target="eth" data-pct="-0.15">-15%</span>
+        <span class="chip" data-target="eth" data-pct="0.15">+15%</span>
+        <span class="chip" data-target="eth" data-pct="0.5">+50%</span>
+        <span class="chip" data-target="eth" data-pct="1">+100%</span>
+      </div>
+    </div>
+
+    <div class="control-card">
+      <div class="control-head">
+        <span class="control-label">Câmbio USD → BRL</span>
+        <span class="control-value num" id="fxVal">R$ 5,20</span>
+      </div>
+      <input type="range" id="fxRange" min="350" max="750" step="1" value="520">
+      <div class="range-scale"><span>3,50</span><span>7,50</span></div>
+      <div class="chip-row">
+        <span class="chip" data-target="fx" data-set="480">4,80</span>
+        <span class="chip" data-target="fx" data-set="520">5,20</span>
+        <span class="chip" data-target="fx" data-set="560">5,60</span>
+        <span class="chip" data-target="fx" data-set="600">6,00</span>
+        <span class="chip reset" id="resetBtn">Resetar tudo</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="result-hero">
+    <div>
+      <div class="eyebrow"><span class="dot"></span>Patrimônio simulado</div>
+      <div class="result-total num" id="resultTotal">US$ 47.437</div>
+      <div class="result-brl num" id="resultBRL">R$ 246.632</div>
+      <span class="delta-pill flat" id="deltaPill">= 0,00% vs. hoje</span>
+    </div>
+    <div class="risk-callout good" id="riskCallout">
+      <span>Menor Health Factor:</span>
+      <span class="hf-num" id="worstHF">2,38</span>
+    </div>
+  </div>
+
+  <div>
+    <div class="section-head">
+      <h2>Posições no Aave V3 no cenário simulado</h2>
+      <span class="hint">HF abaixo de 1,3 pede atenção · liquidação em 1,0</span>
+    </div>
+    <div class="table-scroll" style="margin-top:14px">
+      <table>
+        <thead>
+          <tr>
+            <th>Carteira</th><th>Rede</th>
+            <th class="num">Health Factor</th>
+            <th class="num">Fornecido (simulado)</th>
+            <th class="num">Emprestado</th>
+            <th class="num">Posição líquida (US$ / R$)</th>
+          </tr>
+        </thead>
+        <tbody id="posBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div>
+    <div class="section-head">
+      <h2>Composição do patrimônio simulado</h2>
+    </div>
+    <div class="table-scroll" style="margin-top:14px">
+      <table>
+        <thead><tr><th>Componente</th><th class="num">Quantidade</th><th class="num">Valor USD</th><th class="num">Valor BRL</th></tr></thead>
+        <tbody>
+          <tr><td class="asset">BTC (cbBTC + WBTC, carteira + Aave)</td><td class="num" id="btcQty">0,6374</td><td class="num" id="btcUsd">US$ 49.113</td><td class="num" id="btcBrl">R$ 255.388</td></tr>
+          <tr><td class="asset">ETH (ETH + WETH, carteira + Aave)</td><td class="num" id="ethQty">4,5402</td><td class="num" id="ethUsd">US$ 10.966</td><td class="num" id="ethBrl">R$ 57.023</td></tr>
+          <tr><td class="asset muted">USDC em carteira / Aave / rewards</td><td class="num muted">299,59</td><td class="num">US$ 299,59</td><td class="num muted" id="usdcAssetBrl">R$ 1.558</td></tr>
+          <tr><td class="asset" style="color:var(--bad)">USDC emprestado (passivo Aave)</td><td class="num" style="color:var(--bad)">− 13.504,82</td><td class="num" style="color:var(--bad)">− US$ 13.504,82</td><td class="num" style="color:var(--bad)" id="usdcDebtBrl">− R$ 70.225</td></tr>
+          <tr><td class="asset muted">Outros ativos (SOL, POL, UNI, HYPE, resíduos — constantes)</td><td class="num muted">—</td><td class="num">US$ 564,47</td><td class="num muted" id="otherBrl">R$ 2.935</td></tr>
+          <tr class="total"><td colspan="2">Total simulado</td><td class="num" id="totalRow">US$ 47.437</td><td class="num" id="totalRowBrl">R$ 246.632</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer>
+    Modelo aproximado: o limite de liquidação de cada posição foi inferido a partir do Health Factor e da composição atuais no DeBank (22/08/2026) e mantido fixo; a dívida em USDC não é recalculada por juros acumulados; SOL, POL, UNI, HYPE e saldos residuais são mantidos constantes. Use como referência de cenário, não como garantia de comportamento real do protocolo.
+  </footer>
+
+</div>
+
+<script>
+  // threshold = limite de liquidação real, lido on-chain via getUserAccountData (Aave V3 Pool)
+  const positions = [
+    { wallet: 'Carteira 1', chain: 'Polygon',  btc: 0.2140, eth: 2.1636, usdc: 0,        borrowed: 7036.50, threshold: 0.7920 },
+    { wallet: 'Carteira 1', chain: 'Arbitrum', btc: 0.1925, eth: 0.8815, usdc: 0,        borrowed: 5095.41, threshold: 0.7875 },
+    { wallet: 'Carteira 2', chain: 'Arbitrum', btc: 0.0328, eth: 0,      usdc: 0,        borrowed: 827.51,  threshold: 0.7800 },
+    { wallet: 'Carteira 2', chain: 'Base',     btc: 0.0050, eth: 0.3852, usdc: 297.8045, borrowed: 541.97,  threshold: 0.8088 },
+  ];
+  const BTC_QTY = 0.6374, ETH_QTY = 4.5402;
+  const USDC_ASSET = 299.59, USDC_DEBT = 13501.39, OTHER_USD = 564.47;
+  const BASE_BTC = 77047, BASE_ETH = 2415.4, BASE_FX = 5.20;
+  const BASE_TOTAL = BTC_QTY * BASE_BTC + ETH_QTY * BASE_ETH + USDC_ASSET - USDC_DEBT + OTHER_USD;
+
+  const btcRange = document.getElementById('btcRange');
+  const ethRange = document.getElementById('ethRange');
+  const fxRange = document.getElementById('fxRange');
+
+  function fmtUSD(n) { return 'US$ ' + Math.round(n).toLocaleString('pt-BR'); }
+  function fmtBRL(n) { return 'R$ ' + Math.round(n).toLocaleString('pt-BR'); }
+  function fmtQty(n) { return n.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 }); }
+  function fmtHF(n) { return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function hfClass(hf) { return hf >= 1.5 ? 'good' : hf >= 1.15 ? 'warn' : 'bad'; }
+
+  const posBody = document.getElementById('posBody');
+  positions.forEach((p, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${p.wallet}</td><td class="muted">${p.chain}</td>
+      <td class="num"><span class="hf-pill" id="hfPill${i}"></span></td>
+      <td class="num" id="sup${i}"></td>
+      <td class="num">${fmtUSD(p.borrowed)}</td>
+      <td class="num" style="font-weight:600"><span id="net${i}"></span><span class="sub-brl" id="netBrl${i}"></span></td>`;
+    posBody.appendChild(tr);
+  });
+
+  function render() {
+    const btcPrice = parseInt(btcRange.value, 10);
+    const ethPrice = parseInt(ethRange.value, 10);
+    const fx = parseInt(fxRange.value, 10) / 100;
+
+    document.getElementById('btcVal').textContent = fmtUSD(btcPrice);
+    document.getElementById('ethVal').textContent = fmtUSD(ethPrice);
+    document.getElementById('fxVal').textContent = 'R$ ' + fx.toFixed(2).replace('.', ',');
+
+    const btcUsd = BTC_QTY * btcPrice;
+    const ethUsd = ETH_QTY * ethPrice;
+    const total = btcUsd + ethUsd + USDC_ASSET - USDC_DEBT + OTHER_USD;
+    const totalBRL = total * fx;
+    const deltaPct = (total - BASE_TOTAL) / BASE_TOTAL * 100;
+
+    document.getElementById('resultTotal').textContent = fmtUSD(total);
+    document.getElementById('resultBRL').textContent = fmtBRL(totalBRL);
+    document.getElementById('btcQty').textContent = fmtQty(BTC_QTY);
+    document.getElementById('ethQty').textContent = fmtQty(ETH_QTY);
+    document.getElementById('btcUsd').textContent = fmtUSD(btcUsd);
+    document.getElementById('ethUsd').textContent = fmtUSD(ethUsd);
+    document.getElementById('totalRow').textContent = fmtUSD(total);
+    document.getElementById('btcBrl').textContent = fmtBRL(btcUsd * fx);
+    document.getElementById('ethBrl').textContent = fmtBRL(ethUsd * fx);
+    document.getElementById('usdcAssetBrl').textContent = fmtBRL(USDC_ASSET * fx);
+    document.getElementById('usdcDebtBrl').textContent = '− ' + fmtBRL(USDC_DEBT * fx);
+    document.getElementById('otherBrl').textContent = fmtBRL(OTHER_USD * fx);
+    document.getElementById('totalRowBrl').textContent = fmtBRL(totalBRL);
+
+    const pill = document.getElementById('deltaPill');
+    pill.className = 'delta-pill ' + (deltaPct > 0.05 ? 'up' : deltaPct < -0.05 ? 'down' : 'flat');
+    pill.textContent = (deltaPct >= 0 ? '▲ +' : '▼ ') + deltaPct.toFixed(2).replace('.', ',').replace('-', '') + '% vs. hoje';
+
+    let worst = Infinity;
+    positions.forEach((p, i) => {
+      const supplied = p.btc * btcPrice + p.eth * ethPrice + p.usdc;
+      const hf = p.threshold * supplied / p.borrowed;
+      worst = Math.min(worst, hf);
+      const cls = hfClass(hf);
+      document.getElementById(`hfPill${i}`).className = 'hf-pill ' + cls;
+      document.getElementById(`hfPill${i}`).textContent = fmtHF(hf);
+      document.getElementById(`sup${i}`).textContent = fmtUSD(supplied);
+      document.getElementById('net' + i).textContent = fmtUSD(supplied - p.borrowed);
+      document.getElementById('netBrl' + i).textContent = fmtBRL((supplied - p.borrowed) * fx);
+    });
+
+    const worstCls = hfClass(worst);
+    const callout = document.getElementById('riskCallout');
+    callout.className = 'risk-callout ' + worstCls;
+    document.getElementById('worstHF').textContent = fmtHF(worst);
+    callout.querySelector('span').textContent = worstCls === 'bad'
+      ? 'Risco de liquidação — menor HF:'
+      : worstCls === 'warn'
+      ? 'Atenção, HF caindo — menor HF:'
+      : 'Menor Health Factor:';
+  }
+
+  [btcRange, ethRange, fxRange].forEach(el => el.addEventListener('input', render));
+
+  document.querySelectorAll('.chip[data-pct]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const pct = parseFloat(chip.dataset.pct);
+      if (chip.dataset.target === 'btc') btcRange.value = Math.round(BASE_BTC * (1 + pct));
+      if (chip.dataset.target === 'eth') ethRange.value = Math.round(BASE_ETH * (1 + pct));
+      render();
+    });
+  });
+  document.querySelectorAll('.chip[data-set]').forEach(chip => {
+    chip.addEventListener('click', () => { fxRange.value = chip.dataset.set; render(); });
+  });
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    btcRange.value = BASE_BTC; ethRange.value = Math.round(BASE_ETH); fxRange.value = Math.round(BASE_FX * 100);
+    render();
+  });
+
+  render();
+
+  // ---- Navegação: absoluta no claude.ai, relativa quando hospedado fora ----
+  if (!location.hostname.endsWith('claude.ai')) {
+    document.getElementById('navBack').href = 'index.html';
+    document.getElementById('navPools').href = 'pools.html';
+  }
+</script>

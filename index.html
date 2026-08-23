@@ -1,0 +1,924 @@
+<title>Painel Cripto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #f5f2ea;
+    --surface: #ffffff;
+    --surface-2: #efe9db;
+    --border: #ddd4bf;
+    --text: #23241f;
+    --text-muted: #6c6558;
+    --text-faint: #9a9384;
+    --accent: #a9772f;
+    --accent-soft: #a9772f1a;
+    --accent-strong: #7c5620;
+    --good: #2f7d5c;
+    --good-soft: #2f7d5c1a;
+    --warn: #b9822c;
+    --warn-soft: #b9822c1a;
+    --bad: #b0432f;
+    --bad-soft: #b0432f1a;
+    --shadow: 0 1px 2px rgba(35,32,25,0.06), 0 8px 24px -12px rgba(35,32,25,0.18);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #16151a;
+      --surface: #1e1c22;
+      --surface-2: #26232b;
+      --border: #34303a;
+      --text: #ede9e2;
+      --text-muted: #a29c8f;
+      --text-faint: #726c62;
+      --accent: #d6a24f;
+      --accent-soft: #d6a24f22;
+      --accent-strong: #eab868;
+      --good: #5cba8f;
+      --good-soft: #5cba8f22;
+      --warn: #d9a94f;
+      --warn-soft: #d9a94f22;
+      --bad: #dd7862;
+      --bad-soft: #dd786222;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 28px -12px rgba(0,0,0,0.55);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #16151a;
+    --surface: #1e1c22;
+    --surface-2: #26232b;
+    --border: #34303a;
+    --text: #ede9e2;
+    --text-muted: #a29c8f;
+    --text-faint: #726c62;
+    --accent: #d6a24f;
+    --accent-soft: #d6a24f22;
+    --accent-strong: #eab868;
+    --good: #5cba8f;
+    --good-soft: #5cba8f22;
+    --warn: #d9a94f;
+    --warn-soft: #d9a94f22;
+    --bad: #dd7862;
+    --bad-soft: #dd786222;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 28px -12px rgba(0,0,0,0.55);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 36px;
+  }
+  .num { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+  /* ---- Header ---- */
+  .eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+  .hero {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 24px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  .hero-left { display: flex; flex-direction: column; gap: 10px; }
+  h1 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-optical-sizing: auto;
+    font-weight: 600;
+    font-size: clamp(2.6rem, 5vw, 3.6rem);
+    line-height: 1;
+    margin: 0;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  .hero-sub { color: var(--text-muted); font-size: 14px; max-width: 46ch; }
+  .delta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 600;
+    width: fit-content;
+  }
+  .delta-pill.down { background: var(--bad-soft); color: var(--bad); }
+  .delta-pill.up { background: var(--good-soft); color: var(--good); }
+
+  .fx-box {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-end;
+    min-width: 220px;
+  }
+  .fx-label { font-size: 12px; color: var(--text-muted); }
+  .fx-input-row { display: flex; align-items: center; gap: 8px; }
+  .fx-input-row input {
+    width: 84px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 7px 9px;
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    text-align: right;
+  }
+  .fx-input-row input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .fx-result { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; color: var(--accent-strong); }
+
+  /* ---- Section headings ---- */
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .section-head h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 21px;
+    font-weight: 600;
+    margin: 0;
+  }
+  .section-head .hint { font-size: 12.5px; color: var(--text-faint); }
+
+  /* ---- Wallet cards ---- */
+  .wallet-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 18px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 22px;
+    box-shadow: var(--shadow);
+  }
+  .wcard-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .wcard-name { font-weight: 600; font-size: 15px; }
+  .wcard-addr {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--text-faint);
+    margin-top: 2px;
+  }
+  .wcard-total {
+    font-family: 'Fraunces', serif;
+    font-size: 30px;
+    font-weight: 600;
+    margin: 14px 0 4px;
+  }
+  .chainbar {
+    display: flex;
+    height: 8px;
+    border-radius: 100px;
+    overflow: hidden;
+    margin: 14px 0 10px;
+    background: var(--surface-2);
+  }
+  .chainbar span { height: 100%; }
+  .chain-legend { display: flex; flex-wrap: wrap; gap: 10px 16px; font-size: 12.5px; color: var(--text-muted); }
+  .chain-legend .sw { display: inline-flex; align-items: center; gap: 6px; }
+  .chain-legend .chip { width: 8px; height: 8px; border-radius: 2px; }
+
+  /* ---- Tables ---- */
+  .table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); }
+  table { width: 100%; border-collapse: collapse; min-width: 560px; }
+  thead th {
+    text-align: left;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-faint);
+    font-weight: 600;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+    white-space: nowrap;
+  }
+  thead th.num, tbody td.num { text-align: right; }
+  tbody td {
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr.total td { font-weight: 600; background: var(--surface-2); }
+  td.asset { display: flex; align-items: center; gap: 8px; font-weight: 500; white-space: nowrap; }
+  .asset-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  td.muted, .muted { color: var(--text-faint); }
+
+  .hf-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .hf-pill.good { background: var(--good-soft); color: var(--good); }
+  .hf-pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .hf-pill.bad { background: var(--bad-soft); color: var(--bad); }
+
+  /* ---- Two column wallet detail ---- */
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    gap: 18px;
+    align-items: start;
+  }
+  .detail-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+  .detail-panel-head { padding: 16px 18px 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .detail-panel-head .t { font-weight: 600; font-size: 14.5px; }
+  .detail-panel-head .v { font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: var(--accent-strong); }
+  .detail-panel table { min-width: 0; }
+  .note-row { padding: 10px 18px; font-size: 12.5px; color: var(--text-faint); border-top: 1px solid var(--border); }
+
+  /* ---- Footer ---- */
+  footer {
+    border-top: 1px solid var(--border);
+    padding-top: 22px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 16px;
+    font-size: 12.5px;
+    color: var(--text-faint);
+  }
+  footer a { color: var(--text-muted); }
+  footer .links { display: flex; gap: 18px; flex-wrap: wrap; }
+
+  @media (max-width: 640px) {
+    .hero { align-items: flex-start; }
+    .fx-box { align-items: flex-start; }
+  }
+
+  /* ---- Toolbar ---- */
+  .toolbar { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 15px; border-radius: 9px; font-size: 13.5px; font-weight: 600;
+    font-family: 'Sora', sans-serif; cursor: pointer; text-decoration: none;
+    border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    box-shadow: var(--shadow); transition: transform .06s ease;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent-strong); }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { color: #fff; opacity: .92; }
+  .btn svg { width: 16px; height: 16px; flex: none; }
+
+  /* ---- Update banner ---- */
+  .update-banner {
+    background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 16px;
+    padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;
+    gap: 16px; flex-wrap: wrap;
+  }
+  .update-banner-text strong { display: block; font-family: 'Fraunces', serif; font-size: 16.5px; font-weight: 600; margin-bottom: 2px; }
+  .update-banner-text span { font-size: 13px; color: var(--text-muted); }
+  .btn.lg { padding: 12px 22px; font-size: 14.5px; }
+  .btn.lg svg { width: 17px; height: 17px; }
+  .update-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .copy-toast { font-size: 12.5px; color: var(--good); font-weight: 600; }
+  .copy-fallback { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .copy-fallback input {
+    font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; width: 280px; color: var(--text);
+  }
+  .copy-fallback .hint { font-size: 11.5px; color: var(--text-faint); }
+  .live-badge { font-size: 12px; font-weight: 600; color: var(--good); vertical-align: middle; }
+  .live-note { font-size: 12.5px; color: var(--good); font-weight: 600; margin-top: 2px; }
+
+  /* ---- Print: one elegant A4 sheet ---- */
+  @media print {
+    @page { size: A4; margin: 9mm 11mm; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { background: #fff; font-size: 10px; }
+    .no-print { display: none !important; }
+    .wrap { max-width: none; padding: 0; gap: 10px; }
+    h1 { font-size: 28px; }
+    .hero { padding-bottom: 10px; gap: 10px; }
+    .hero-sub { display: none; }
+    .fx-input-row { display: none; }
+    .fx-box { min-width: 0; }
+    .fx-result { font-size: 15px; }
+    .eyebrow { font-size: 9px; }
+    .section-head h2 { font-size: 13px; }
+    .section-head .hint { font-size: 9px; }
+    .wallet-grid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+    .detail-grid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+    .card, .table-scroll, .detail-panel { box-shadow: none !important; break-inside: avoid; page-break-inside: avoid; }
+    .card { padding: 10px 12px; }
+    .wcard-total { font-size: 19px; margin: 6px 0 4px; }
+    .chainbar { margin: 8px 0 6px; }
+    .chain-legend { font-size: 9.5px; gap: 4px 10px; }
+    .detail-panel-head { padding: 8px 10px; }
+    thead th { padding: 5px 8px; font-size: 8px; }
+    tbody td { padding: 4px 8px; font-size: 9.5px; }
+    .hf-pill { padding: 1px 7px; font-size: 9.5px; }
+    .note-row { padding: 4px 10px; font-size: 8.5px; }
+    footer { padding-top: 8px; font-size: 8px; gap: 6px; }
+    a[href] { color: inherit; text-decoration: none; }
+  }
+</style>
+
+<div class="wrap">
+
+  <div class="toolbar no-print">
+    <a class="btn" id="navPools" href="https://claude.ai/code/artifact/0578293c-9dff-416c-864e-1db750c55f90">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
+      Pools de liquidez
+    </a>
+    <a class="btn" id="navSim" href="https://claude.ai/code/artifact/55f2adfa-f26c-4746-a456-233f662587df">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+      Simulador de patrimônio
+    </a>
+    <button class="btn primary" onclick="window.print()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+      Imprimir / Salvar PDF
+    </button>
+  </div>
+
+  <div class="update-banner no-print">
+    <div class="update-banner-text">
+      <strong>Quer os números de agora?</strong>
+      <span>O botão copia o pedido — cole aqui no chat com o Claude e eu atualizo carteiras, Aave e preços.</span>
+    </div>
+    <div class="update-side">
+      <button class="btn primary lg" id="updateBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+        Atualizar página
+      </button>
+      <div class="copy-toast" id="copyToast" hidden></div>
+      <div class="copy-fallback" id="copyFallback" hidden>
+        <input id="copyFallbackInput" type="text" readonly value="Atualiza o painel cripto inteiro">
+        <span class="hint">Selecionado — Ctrl+C (ou ⌘+C) e cole no chat.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero">
+    <div class="hero-left">
+      <div class="eyebrow"><span class="dot"></span>Painel consolidado · 2 carteiras · snapshot 22/08/2026</div>
+      <h1 class="num" id="heroTotal">US$ 47.437</h1>
+      <span class="delta-pill down">▼ 2,95% nas últimas 24h</span>
+      <div class="hero-sub">Soma de saldo em carteira + posições líquidas em Aave V3 (fornecido − emprestado) das duas carteiras DeBank monitoradas.</div>
+      <div class="live-note" id="liveNote" hidden>🟢 Posições Aave lidas agora mesmo, direto da blockchain — saldo em carteira ainda é do snapshot.</div>
+    </div>
+    <div class="fx-box">
+      <div class="fx-label">Câmbio USD → BRL</div>
+      <div class="fx-input-row">
+        <span>R$</span>
+        <input id="fx" type="text" inputmode="decimal" value="5,20">
+        <span>/ US$</span>
+      </div>
+      <div class="fx-result" id="fxResult">R$ 246.632</div>
+    </div>
+  </div>
+
+  <!-- WALLET SUMMARY CARDS -->
+  <div class="wallet-grid">
+
+    <div class="card">
+      <div class="wcard-top">
+        <div>
+          <div class="wcard-name">Carteira 1</div>
+          <div class="wcard-addr">0x2af9…2a47</div>
+        </div>
+        <span class="delta-pill down">▼ 2,98%</span>
+      </div>
+      <div class="wcard-total num" id="w1Total">US$ 43.379</div>
+      <div class="chainbar">
+        <span style="width:38%; background:#5b8def"></span>
+        <span style="width:34%; background:#8a63d2"></span>
+        <span style="width:27%; background:#3aa0c9"></span>
+        <span style="width:1%; background:var(--border)"></span>
+      </div>
+      <div class="chain-legend">
+        <span class="sw"><span class="chip" style="background:#5b8def"></span>Base 38% · US$ 16.537</span>
+        <span class="sw"><span class="chip" style="background:#8a63d2"></span>Polygon 34% · US$ 14.947</span>
+        <span class="sw"><span class="chip" style="background:#3aa0c9"></span>Arbitrum 27% · US$ 11.876</span>
+        <span class="sw muted">+ 12 redes · US$ 19</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="wcard-top">
+        <div>
+          <div class="wcard-name">Carteira 2</div>
+          <div class="wcard-addr">0x68f0…2072</div>
+        </div>
+        <span class="delta-pill down">▼ 2,59%</span>
+      </div>
+      <div class="wcard-total num" id="w2Total">US$ 4.058</div>
+      <div class="chainbar">
+        <span style="width:65%; background:#3aa0c9"></span>
+        <span style="width:27%; background:#5b8def"></span>
+        <span style="width:6%; background:#4ea67a"></span>
+        <span style="width:2%; background:#c98a3a"></span>
+      </div>
+      <div class="chain-legend">
+        <span class="sw"><span class="chip" style="background:#3aa0c9"></span>Arbitrum 65% · US$ 2.628</span>
+        <span class="sw"><span class="chip" style="background:#5b8def"></span>Base 27% · US$ 1.076</span>
+        <span class="sw"><span class="chip" style="background:#4ea67a"></span>HyperEVM 6% · US$ 252</span>
+        <span class="sw muted">+ Ethereum, Polygon, 9 redes · US$ 102</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- AAVE / RISK -->
+  <div>
+    <div class="section-head">
+      <h2>Posições em Aave V3 <span class="live-badge" id="aaveLiveBadge" hidden>· ao vivo</span></h2>
+      <span class="hint">Health Factor abaixo de 1,3 pede atenção · liquidação ocorre em 1,0</span>
+    </div>
+    <div class="table-scroll" style="margin-top:14px">
+      <table>
+        <thead>
+          <tr>
+            <th>Carteira</th>
+            <th>Rede</th>
+            <th class="num">Health Factor</th>
+            <th class="num">Fornecido</th>
+            <th class="num">Emprestado</th>
+            <th class="num">Posição líquida</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-wallet="Carteira 1" data-chain="Polygon">
+            <td>Carteira 1</td>
+            <td class="muted">Polygon</td>
+            <td class="num"><span class="hf-pill good" id="hf0">2,44</span></td>
+            <td class="num" id="sup0">US$ 21.707,21</td>
+            <td class="num" id="debt0">US$ 7.038,23</td>
+            <td class="num" id="net0" style="font-weight:600">US$ 14.669</td>
+          </tr>
+          <tr data-wallet="Carteira 1" data-chain="Arbitrum">
+            <td>Carteira 1</td>
+            <td class="muted">Arbitrum</td>
+            <td class="num"><span class="hf-pill good" id="hf1">2,62</span></td>
+            <td class="num" id="sup1">US$ 16.962,38</td>
+            <td class="num" id="debt1">US$ 5.096,76</td>
+            <td class="num" id="net1" style="font-weight:600">US$ 11.866</td>
+          </tr>
+          <tr data-wallet="Carteira 2" data-chain="Arbitrum">
+            <td>Carteira 2</td>
+            <td class="muted">Arbitrum</td>
+            <td class="num"><span class="hf-pill good" id="hf2">2,38</span></td>
+            <td class="num" id="sup2">US$ 2.528,19</td>
+            <td class="num" id="debt2">US$ 827,73</td>
+            <td class="num" id="net2" style="font-weight:600">US$ 1.700</td>
+          </tr>
+          <tr data-wallet="Carteira 2" data-chain="Base">
+            <td>Carteira 2</td>
+            <td class="muted">Base</td>
+            <td class="num"><span class="hf-pill good" id="hf3">2,41</span></td>
+            <td class="num" id="sup3">US$ 1.613,70</td>
+            <td class="num" id="debt3">US$ 542,10</td>
+            <td class="num" id="net3" style="font-weight:600">US$ 1.072</td>
+          </tr>
+          <tr class="total">
+            <td colspan="3">Total das 4 posições</td>
+            <td class="num" id="supTotal">US$ 42.811,48</td>
+            <td class="num" id="debtTotal">US$ 13.504,82</td>
+            <td class="num" id="netTotal">US$ 29.306,66</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- WALLET DETAIL -->
+  <div>
+    <div class="section-head">
+      <h2>Saldo em carteira (spot) <span class="live-badge" id="spotLiveBadge" hidden>· ao vivo</span></h2>
+      <span class="hint">Sem contar posições em Aave</span>
+    </div>
+    <div class="detail-grid" style="margin-top:14px">
+
+      <div class="detail-panel">
+        <div class="detail-panel-head">
+          <span class="t">Carteira 1 · 0x2af9…2a47</span>
+          <span class="v" id="w1SpotTotal">US$ 16.844</span>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Ativo</th><th class="num">Qtd.</th><th class="num">Preço</th><th class="num">Valor</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="asset"><span class="asset-dot" style="background:#e79a3d"></span>cbBTC</td><td class="num" id="w1cbbtcQty">0,1814</td><td class="num muted" id="w1cbbtcPrice">77.047,50</td><td class="num" id="w1cbbtcVal">US$ 13.979,82</td></tr>
+            <tr><td class="asset"><span class="asset-dot" style="background:#8a92b2"></span>ETH</td><td class="num" id="w1ethQty">0,9382</td><td class="num muted" id="w1ethPrice">2.415,27</td><td class="num" id="w1ethVal">US$ 2.266,05</td></tr>
+            <tr><td class="asset"><span class="asset-dot" style="background:#8a92b2"></span>WETH</td><td class="num" id="w1wethQty">0,1205</td><td class="num muted" id="w1wethPrice">2.415,27</td><td class="num" id="w1wethVal">US$ 291,00</td></tr>
+            <tr><td class="asset"><span class="asset-dot" style="background:#8a63d2"></span>SOL (Wormhole)</td><td class="num" id="w1solQty">1,7904</td><td class="num muted" id="w1solPrice">93,29</td><td class="num" id="w1solVal">US$ 167,03</td></tr>
+            <tr><td class="asset"><span class="asset-dot" style="background:#8a63d2"></span>POL</td><td class="num" id="w1polQty">689,9944</td><td class="num muted" id="w1polPrice">0,1041</td><td class="num" id="w1polVal">US$ 71,85</td></tr>
+            <tr><td class="asset"><span class="asset-dot" style="background:#ec5f8a"></span>UNI</td><td class="num" id="w1uniQty">8,9983</td><td class="num muted" id="w1uniPrice">4,29</td><td class="num" id="w1uniVal">US$ 38,64</td></tr>
+            <tr><td class="asset muted">Outros (saldo residual)</td><td class="num muted">—</td><td class="num muted">—</td><td class="num muted">≈ US$ 29,61</td></tr>
+          </tbody>
+        </table>
+        <div class="note-row">+ MM.Finance (farming, posição de pó · &lt; US$ 0,01) não listada acima.</div>
+      </div>
+
+      <div class="detail-panel">
+        <div class="detail-panel-head">
+          <span class="t">Carteira 2 · 0x68f0…2072</span>
+          <span class="v" id="w2SpotTotal">US$ 1.284</span>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Ativo</th><th class="num">Qtd.</th><th class="num">Preço</th><th class="num">Valor</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="asset"><span class="asset-dot" style="background:#e79a3d"></span>WBTC</td><td class="num" id="w2wbtcQty">0,0117</td><td class="num muted" id="w2wbtcPrice">77.039,90</td><td class="num" id="w2wbtcVal">US$ 903,40</td></tr>
+            <tr><td class="asset"><span class="asset-dot" style="background:#4ea67a"></span>HYPE</td><td class="num" id="w2hypeQty">3,1882</td><td class="num muted" id="w2hypePrice">79,07</td><td class="num" id="w2hypeVal">US$ 252,10</td></tr>
+            <tr><td class="asset"><span class="asset-dot" style="background:#8a92b2"></span>WETH</td><td class="num" id="w2wethQty">0,0229</td><td class="num muted" id="w2wethPrice">2.415,62</td><td class="num" id="w2wethVal">US$ 55,21</td></tr>
+            <tr><td class="asset"><span class="asset-dot" style="background:#8a92b2"></span>ETH (3 redes)</td><td class="num" id="w2ethQty">0,0283</td><td class="num muted" id="w2ethPrice">2.415,62</td><td class="num" id="w2ethVal">US$ 68,35</td></tr>
+            <tr><td class="asset"><span class="asset-dot" style="background:#8a63d2"></span>POL</td><td class="num" id="w2polQty">50,0000</td><td class="num muted" id="w2polPrice">0,1041</td><td class="num" id="w2polVal">US$ 5,21</td></tr>
+            <tr><td class="asset muted">MON, WGC (pó)</td><td class="num muted">—</td><td class="num muted">—</td><td class="num muted">≈ US$ 0,03</td></tr>
+          </tbody>
+        </table>
+        <div class="note-row">+ Merkl: recompensa de US$ 1,73 em USDC não listada acima.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ASSET ROLLUP -->
+  <div>
+    <div class="section-head">
+      <h2>Exposição consolidada por ativo</h2>
+      <span class="hint">Carteira + colateral fornecido no Aave, somando as duas carteiras</span>
+    </div>
+    <div class="table-scroll" style="margin-top:14px">
+      <table>
+        <thead>
+          <tr>
+            <th>Ativo</th>
+            <th class="num">Carteira 1</th>
+            <th class="num">Carteira 2</th>
+            <th class="num">Total</th>
+            <th class="num">Valor USD</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="asset"><span class="asset-dot" style="background:#e79a3d"></span>BTC (cbBTC + WBTC, spot + Aave)</td>
+            <td class="num">0,5879</td>
+            <td class="num">0,0495</td>
+            <td class="num" style="font-weight:600">0,6374</td>
+            <td class="num" style="font-weight:600">US$ 49.113</td>
+          </tr>
+          <tr>
+            <td class="asset"><span class="asset-dot" style="background:#8a92b2"></span>ETH (ETH + WETH, spot + Aave)</td>
+            <td class="num">4,1038</td>
+            <td class="num">0,4364</td>
+            <td class="num" style="font-weight:600">4,5402</td>
+            <td class="num" style="font-weight:600">US$ 10.966</td>
+          </tr>
+          <tr>
+            <td class="asset"><span class="asset-dot" style="background:#4ea67a"></span>HYPE</td>
+            <td class="num">—</td>
+            <td class="num">3,1882</td>
+            <td class="num" style="font-weight:600">3,1882</td>
+            <td class="num" style="font-weight:600">US$ 252,10</td>
+          </tr>
+          <tr>
+            <td class="asset"><span class="asset-dot" style="background:#8a63d2"></span>SOL (Wormhole)</td>
+            <td class="num">1,7904</td>
+            <td class="num">—</td>
+            <td class="num" style="font-weight:600">1,7904</td>
+            <td class="num" style="font-weight:600">US$ 167,03</td>
+          </tr>
+          <tr>
+            <td class="asset"><span class="asset-dot" style="background:#8a63d2"></span>POL</td>
+            <td class="num">689,9944</td>
+            <td class="num">50,0000</td>
+            <td class="num" style="font-weight:600">739,9944</td>
+            <td class="num" style="font-weight:600">US$ 77,06</td>
+          </tr>
+          <tr>
+            <td class="asset"><span class="asset-dot" style="background:#ec5f8a"></span>UNI</td>
+            <td class="num">8,9983</td>
+            <td class="num">—</td>
+            <td class="num" style="font-weight:600">8,9983</td>
+            <td class="num" style="font-weight:600">US$ 38,64</td>
+          </tr>
+          <tr>
+            <td class="asset muted">USDC em carteira / Aave / rewards</td>
+            <td class="num muted">—</td>
+            <td class="num">299,59</td>
+            <td class="num" style="font-weight:600">299,59</td>
+            <td class="num" style="font-weight:600">US$ 299,59</td>
+          </tr>
+          <tr>
+            <td class="asset" style="color:var(--bad)"><span class="asset-dot" style="background:var(--bad)"></span>USDC emprestado (passivo Aave)</td>
+            <td class="num" style="color:var(--bad)">− 12.134,99</td>
+            <td class="num" style="color:var(--bad)">− 1.369,83</td>
+            <td class="num" style="font-weight:600; color:var(--bad)">− 13.504,82</td>
+            <td class="num" style="font-weight:600; color:var(--bad)">− US$ 13.504,82</td>
+          </tr>
+          <tr class="total">
+            <td colspan="4">Patrimônio líquido total</td>
+            <td class="num">US$ 47.437</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer>
+    <div>
+      Snapshot manual coletado do DeBank em 22/08/2026. Os preços de BTC/ETH variam a cada minuto — para atualizar, é só pedir um novo snapshot. Valores aproximados; não constitui aconselhamento financeiro.
+    </div>
+    <div class="links">
+      <a href="https://debank.com/profile/0x2af9997fc77e50a3cde92b6452ee2faa0ddf2a47" target="_blank" rel="noopener">Carteira 1 no DeBank ↗</a>
+      <a href="https://debank.com/profile/0x68f0271fd7d9813f951419a1108fc1c9c0ba2072" target="_blank" rel="noopener">Carteira 2 no DeBank ↗</a>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+  const totals = { combined: 47437, w1: 43379, w2: 4058 };
+  const fxInput = document.getElementById('fx');
+  const fxResult = document.getElementById('fxResult');
+
+  function parseFx(v) {
+    const n = parseFloat(v.replace(/\./g, '').replace(',', '.'));
+    return isNaN(n) ? 0 : n;
+  }
+  function fmtBRL(n) {
+    return 'R$ ' + Math.round(n).toLocaleString('pt-BR');
+  }
+  function update() {
+    const rate = parseFx(fxInput.value);
+    fxResult.textContent = fmtBRL(totals.combined * rate);
+  }
+  fxInput.addEventListener('input', update);
+  update();
+
+  const REQUEST_TEXT = 'Atualiza o painel cripto inteiro';
+  let toastTimer = null;
+  function showToast(msg) {
+    const t = document.getElementById('copyToast');
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.hidden = true; }, 4500);
+  }
+  let liveMode = false;
+  document.getElementById('updateBtn').addEventListener('click', async () => {
+    if (liveMode) {
+      showToast('Consultando a blockchain...');
+      const results = await Promise.allSettled([refreshAaveLive(), refreshSpotLive()]);
+      showToast(results.some(r => r.status === 'fulfilled') ? 'Atualizado agora mesmo.' : 'Não consegui consultar agora — tente de novo em instantes.');
+      return;
+    }
+    document.getElementById('copyFallback').hidden = true;
+    try {
+      await navigator.clipboard.writeText(REQUEST_TEXT);
+      showToast('Copiado! Cole aqui no chat com o Claude para atualizar.');
+    } catch (e) {
+      const box = document.getElementById('copyFallback');
+      const input = document.getElementById('copyFallbackInput');
+      box.hidden = false;
+      input.focus();
+      input.select();
+      try {
+        document.execCommand('copy');
+        showToast('Copiado! Cole aqui no chat com o Claude para atualizar.');
+      } catch (e2) { /* usuário copia manualmente pelo campo acima */ }
+    }
+  });
+
+  // ---- Navegação: absoluta no claude.ai, relativa quando hospedado fora ----
+  const ON_CLAUDE = location.hostname.endsWith('claude.ai');
+  if (!ON_CLAUDE) {
+    document.getElementById('navPools').href = 'pools.html';
+    document.getElementById('navSim').href = 'simulador.html';
+  }
+
+  // ---- Aave V3 ao vivo (funciona quando hospedado fora do sandbox do Artifact) ----
+  const AAVE_CHAINS = {
+    Polygon:  { rpc: 'https://polygon-bor-rpc.publicnode.com',  pool: '0x794a61358D6845594F94dc1DB02A252b5b4814aD' },
+    Arbitrum: { rpc: 'https://arbitrum-one-rpc.publicnode.com', pool: '0x794a61358D6845594F94dc1DB02A252b5b4814aD' },
+    Base:     { rpc: 'https://base.publicnode.com',             pool: '0xA238Dd80C259a72e81d7e4664a9801593F98d1c5' },
+  };
+  const AAVE_WALLETS = {
+    'Carteira 1': '0x2af9997fc77e50a3cde92b6452ee2faa0ddf2a47',
+    'Carteira 2': '0x68f0271fd7d9813f951419a1108fc1c9c0ba2072',
+  };
+  // Poeira sem valor relevante para mapear (MON, WGC, MM.Finance) — fica no valor do snapshot.
+  const SPOT_STATIC = { 'Carteira 1': 29.61, 'Carteira 2': 0.03 };
+  // Parte do saldo em carteira coberta pela leitura ao vivo (cbBTC/WBTC, ETH/WETH, POL, SOL, UNI, HYPE) — começa com o valor do snapshot e é atualizada por refreshSpotLive().
+  let spotLive = { 'Carteira 1': 16844 - 29.61, 'Carteira 2': 1284 - 0.03 };
+  let aaveNet = { 'Carteira 1': 14669 + 11866, 'Carteira 2': 1700 + 1072 };
+
+  function recomputeTotals() {
+    const w1 = SPOT_STATIC['Carteira 1'] + spotLive['Carteira 1'] + aaveNet['Carteira 1'];
+    const w2 = SPOT_STATIC['Carteira 2'] + spotLive['Carteira 2'] + aaveNet['Carteira 2'];
+    document.getElementById('w1Total').textContent = fmtUSD0(w1);
+    document.getElementById('w2Total').textContent = fmtUSD0(w2);
+    document.getElementById('w1SpotTotal').textContent = fmtUSD0(SPOT_STATIC['Carteira 1'] + spotLive['Carteira 1']);
+    document.getElementById('w2SpotTotal').textContent = fmtUSD0(SPOT_STATIC['Carteira 2'] + spotLive['Carteira 2']);
+    document.getElementById('heroTotal').textContent = fmtUSD0(w1 + w2);
+    totals.combined = w1 + w2; totals.w1 = w1; totals.w2 = w2;
+    update();
+  }
+
+  function padHex(h) { return h.padStart(64, '0'); }
+  async function ethCall(rpc, to, data) {
+    const res = await fetch(rpc, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to, data }, 'latest'] }),
+    });
+    const j = await res.json();
+    if (j.error) throw new Error(j.error.message);
+    return j.result;
+  }
+  function decodeAave(hex) {
+    const clean = hex.slice(2);
+    const f = [];
+    for (let i = 0; i < 6; i++) f.push(BigInt('0x' + clean.slice(i * 64, (i + 1) * 64)));
+    const [collat, debt, , liqThresh, , hf] = f;
+    return {
+      collateralUSD: Number(collat) / 1e8,
+      debtUSD: Number(debt) / 1e8,
+      liqThresholdPct: Number(liqThresh) / 100,
+      healthFactor: hf === (2n ** 256n - 1n) ? Infinity : Number(hf) / 1e18,
+    };
+  }
+  function hfClass(hf) { return hf >= 1.5 ? 'good' : hf >= 1.15 ? 'warn' : 'bad'; }
+  function fmtUSD2(n) { return 'US$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function fmtUSD0(n) { return 'US$ ' + Math.round(n).toLocaleString('pt-BR'); }
+
+  async function refreshAaveLive() {
+    const rows = [
+      { idx: 0, wallet: 'Carteira 1', chain: 'Polygon' },
+      { idx: 1, wallet: 'Carteira 1', chain: 'Arbitrum' },
+      { idx: 2, wallet: 'Carteira 2', chain: 'Arbitrum' },
+      { idx: 3, wallet: 'Carteira 2', chain: 'Base' },
+    ];
+    const selector = '0xbf92857c';
+    const results = [];
+    for (const row of rows) {
+      const owner = AAVE_WALLETS[row.wallet];
+      const cfg = AAVE_CHAINS[row.chain];
+      const data = selector + padHex(owner.slice(2).toLowerCase());
+      const r = await ethCall(cfg.rpc, cfg.pool, data);
+      results.push({ ...row, ...decodeAave(r) });
+    }
+
+    let supTotal = 0, debtTotal = 0;
+    const walletNet = { 'Carteira 1': 0, 'Carteira 2': 0 };
+    results.forEach(r => {
+      document.getElementById('hf' + r.idx).textContent = r.healthFactor === Infinity ? '∞' : r.healthFactor.toFixed(2).replace('.', ',');
+      document.getElementById('hf' + r.idx).className = 'hf-pill ' + hfClass(r.healthFactor);
+      document.getElementById('sup' + r.idx).textContent = fmtUSD2(r.collateralUSD);
+      document.getElementById('debt' + r.idx).textContent = fmtUSD2(r.debtUSD);
+      const net = r.collateralUSD - r.debtUSD;
+      document.getElementById('net' + r.idx).textContent = fmtUSD0(net);
+      supTotal += r.collateralUSD; debtTotal += r.debtUSD;
+      walletNet[r.wallet] += net;
+    });
+    document.getElementById('supTotal').textContent = fmtUSD2(supTotal);
+    document.getElementById('debtTotal').textContent = fmtUSD2(debtTotal);
+    document.getElementById('netTotal').textContent = fmtUSD0(supTotal - debtTotal);
+
+    aaveNet = walletNet;
+    recomputeTotals();
+    document.getElementById('aaveLiveBadge').hidden = false;
+    onLiveSuccess();
+  }
+
+  async function nativeBal(rpc, addr) {
+    const res = await fetch(rpc, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_getBalance', params: [addr, 'latest'] }) });
+    const j = await res.json();
+    if (j.error) throw new Error(j.error.message);
+    return Number(BigInt(j.result)) / 1e18;
+  }
+  async function erc20Bal(rpc, token, addr, decimals) {
+    const r = await ethCall(rpc, token, '0x70a08231' + padHex(addr.slice(2).toLowerCase()));
+    return Number(BigInt(r)) / Math.pow(10, decimals);
+  }
+
+  const RPC = {
+    base: 'https://base.publicnode.com',
+    arbitrum: 'https://arbitrum-one-rpc.publicnode.com',
+    polygon: 'https://polygon-bor-rpc.publicnode.com',
+    ethereum: 'https://ethereum-rpc.publicnode.com',
+    hyperevm: 'https://rpc.hyperliquid.xyz/evm',
+  };
+  const SPOT_TOKENS = {
+    baseWETH: '0x4200000000000000000000000000000000000006',
+    baseCbBTC: '0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf',
+    arbWBTC: '0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f',
+    ethWETH: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+    polyUNI: '0xb33EaAd8d922B1083446DC23f610c2567fB5180f',
+    polySOL: '0xD93f7E271cB87c23AAa73edC008A79646d1F9912',
+  };
+
+  function setSpotCell(prefix, qty, price) {
+    document.getElementById(prefix + 'Qty').textContent = qty.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+    document.getElementById(prefix + 'Price').textContent = price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById(prefix + 'Val').textContent = fmtUSD2(qty * price);
+  }
+
+  async function refreshSpotLive() {
+    const w1 = AAVE_WALLETS['Carteira 1'], w2 = AAVE_WALLETS['Carteira 2'];
+    const priceData = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,polygon-ecosystem-token,solana,uniswap,hyperliquid&vs_currencies=usd').then(r => r.json());
+    const btcPrice = priceData.bitcoin.usd;
+    const ethPrice = priceData.ethereum.usd;
+    const polPrice = (priceData['polygon-ecosystem-token'] || {}).usd || 0.1041;
+    const solPrice = (priceData.solana || {}).usd || 0;
+    const uniPrice = (priceData.uniswap || {}).usd || 0;
+    const hypePrice = (priceData.hyperliquid || {}).usd || 0;
+
+    const [w1EthQty, w1WethQty, w1CbbtcQty, w1PolQty, w1UniQty, w1SolQty] = await Promise.all([
+      nativeBal(RPC.base, w1),
+      erc20Bal(RPC.base, SPOT_TOKENS.baseWETH, w1, 18),
+      erc20Bal(RPC.base, SPOT_TOKENS.baseCbBTC, w1, 8),
+      nativeBal(RPC.polygon, w1),
+      erc20Bal(RPC.polygon, SPOT_TOKENS.polyUNI, w1, 18),
+      erc20Bal(RPC.polygon, SPOT_TOKENS.polySOL, w1, 9),
+    ]);
+    const [w2BaseEth, w2ArbEth, w2EthEth, w2WbtcQty, w2WethQty, w2PolQty, w2HypeQty] = await Promise.all([
+      nativeBal(RPC.base, w2),
+      nativeBal(RPC.arbitrum, w2),
+      nativeBal(RPC.ethereum, w2),
+      erc20Bal(RPC.arbitrum, SPOT_TOKENS.arbWBTC, w2, 8),
+      erc20Bal(RPC.ethereum, SPOT_TOKENS.ethWETH, w2, 18),
+      nativeBal(RPC.polygon, w2),
+      nativeBal(RPC.hyperevm, w2),
+    ]);
+    const w2EthQty = w2BaseEth + w2ArbEth + w2EthEth;
+
+    setSpotCell('w1cbbtc', w1CbbtcQty, btcPrice);
+    setSpotCell('w1eth', w1EthQty, ethPrice);
+    setSpotCell('w1weth', w1WethQty, ethPrice);
+    setSpotCell('w1pol', w1PolQty, polPrice);
+    setSpotCell('w1uni', w1UniQty, uniPrice);
+    setSpotCell('w1sol', w1SolQty, solPrice);
+    setSpotCell('w2wbtc', w2WbtcQty, btcPrice);
+    setSpotCell('w2weth', w2WethQty, ethPrice);
+    setSpotCell('w2eth', w2EthQty, ethPrice);
+    setSpotCell('w2pol', w2PolQty, polPrice);
+    setSpotCell('w2hype', w2HypeQty, hypePrice);
+
+    spotLive['Carteira 1'] = w1CbbtcQty * btcPrice + w1EthQty * ethPrice + w1WethQty * ethPrice + w1PolQty * polPrice + w1UniQty * uniPrice + w1SolQty * solPrice;
+    spotLive['Carteira 2'] = w2WbtcQty * btcPrice + w2WethQty * ethPrice + w2EthQty * ethPrice + w2PolQty * polPrice + w2HypeQty * hypePrice;
+
+    recomputeTotals();
+    document.getElementById('spotLiveBadge').hidden = false;
+    onLiveSuccess();
+  }
+
+  function onLiveSuccess() {
+    document.getElementById('liveNote').hidden = false;
+    document.getElementById('updateBtn').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>Atualizar agora';
+    document.querySelector('.update-banner-text strong').textContent = 'Dados ao vivo';
+    document.querySelector('.update-banner-text span').textContent = 'Aave e a maior parte da carteira lidos direto da blockchain agora mesmo. Clique para consultar de novo quando quiser.';
+    liveMode = true;
+  }
+
+  Promise.allSettled([refreshAaveLive(), refreshSpotLive()]);
+  // Se ambas falharem (sandbox do Artifact ou sem rede), a página mantém o snapshot e o botão de pedir atualização ao Claude.
+</script>

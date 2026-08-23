@@ -1,0 +1,598 @@
+<title>Pools de Liquidez</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #f5f2ea; --surface: #ffffff; --surface-2: #efe9db; --border: #ddd4bf;
+    --text: #23241f; --text-muted: #6c6558; --text-faint: #9a9384;
+    --accent: #a9772f; --accent-soft: #a9772f1a; --accent-strong: #7c5620;
+    --good: #2f7d5c; --good-soft: #2f7d5c1a;
+    --warn: #b9822c; --warn-soft: #b9822c1a;
+    --bad: #b0432f; --bad-soft: #b0432f1a;
+    --shadow: 0 1px 2px rgba(35,32,25,0.06), 0 8px 24px -12px rgba(35,32,25,0.18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #16151a; --surface: #1e1c22; --surface-2: #26232b; --border: #34303a;
+      --text: #ede9e2; --text-muted: #a29c8f; --text-faint: #726c62;
+      --accent: #d6a24f; --accent-soft: #d6a24f22; --accent-strong: #eab868;
+      --good: #5cba8f; --good-soft: #5cba8f22; --warn: #d9a94f; --warn-soft: #d9a94f22;
+      --bad: #dd7862; --bad-soft: #dd786222;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 28px -12px rgba(0,0,0,0.55);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #16151a; --surface: #1e1c22; --surface-2: #26232b; --border: #34303a;
+    --text: #ede9e2; --text-muted: #a29c8f; --text-faint: #726c62;
+    --accent: #d6a24f; --accent-soft: #d6a24f22; --accent-strong: #eab868;
+    --good: #5cba8f; --good-soft: #5cba8f22; --warn: #d9a94f; --warn-soft: #d9a94f22;
+    --bad: #dd7862; --bad-soft: #dd786222;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 28px -12px rgba(0,0,0,0.55);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Sora', ui-sans-serif, system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 40px 24px 80px; display: flex; flex-direction: column; gap: 30px; }
+  .num { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+  .topnav { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 15px; border-radius: 9px; font-size: 13.5px; font-weight: 600; font-family: 'Sora', sans-serif; cursor: pointer; text-decoration: none; border: 1px solid var(--border); background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+  .btn:hover { border-color: var(--accent); color: var(--accent-strong); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { color: #fff; opacity: .92; }
+  .btn.ghost { background: transparent; box-shadow: none; }
+  .btn svg { width: 15px; height: 15px; flex: none; }
+  .nav-links { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .eyebrow { display: flex; align-items: center; gap: 10px; font-size: 12.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; }
+  .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  h1 { font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: clamp(1.9rem, 3.4vw, 2.5rem); margin: 6px 0 4px; letter-spacing: -0.01em; text-wrap: balance; }
+  .lede { color: var(--text-muted); font-size: 14px; max-width: 68ch; }
+
+  /* summary strip */
+  .summary-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; box-shadow: var(--shadow); }
+  .stat .k { font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-faint); font-weight: 600; }
+  .stat .v { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 600; margin-top: 6px; }
+  .stat .v.good { color: var(--good); } .stat .v.bad { color: var(--bad); }
+
+  /* empty state */
+  .empty {
+    background: var(--surface); border: 1px dashed var(--border); border-radius: 16px;
+    padding: 52px 32px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 14px;
+  }
+  .empty svg { width: 40px; height: 40px; color: var(--text-faint); }
+  .empty h3 { font-family: 'Fraunces', serif; font-size: 20px; margin: 0; font-weight: 600; }
+  .empty p { color: var(--text-muted); font-size: 14px; max-width: 48ch; margin: 0; }
+
+  /* add form */
+  .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 22px 24px; box-shadow: var(--shadow); display: none; flex-direction: column; gap: 16px; }
+  .form-card.open { display: flex; }
+  .form-card h3 { font-family: 'Fraunces', serif; font-size: 18px; margin: 0; font-weight: 600; }
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 11.5px; color: var(--text-faint); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .field input, .field select {
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
+    color: var(--text); font-family: 'IBM Plex Mono', monospace; font-size: 13.5px;
+  }
+  .field input:focus, .field select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .form-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+  /* pool card */
+  .pool-list { display: flex; flex-direction: column; gap: 16px; }
+  .pool-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; }
+  .pool-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; padding: 18px 22px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .pool-pair { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; }
+  .pool-tags { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .tag { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 100px; background: var(--surface-2); color: var(--text-muted); }
+  .tag.auto { background: var(--accent-soft); color: var(--accent-strong); }
+
+  /* update banner */
+  .update-banner {
+    background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 16px;
+    padding: 18px 22px; display: flex; justify-content: space-between; align-items: center;
+    gap: 16px; flex-wrap: wrap;
+  }
+  .update-banner-text strong { display: block; font-family: 'Fraunces', serif; font-size: 16.5px; font-weight: 600; margin-bottom: 2px; }
+  .update-banner-text span { font-size: 13px; color: var(--text-muted); }
+  .btn.lg { padding: 12px 22px; font-size: 14.5px; }
+  .btn.lg svg { width: 17px; height: 17px; }
+  .update-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .copy-toast { font-size: 12.5px; color: var(--good); font-weight: 600; }
+  .copy-fallback { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .copy-fallback input {
+    font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; width: 260px; color: var(--text);
+  }
+  .copy-fallback .hint { font-size: 11.5px; color: var(--text-faint); }
+  .status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 100px; font-size: 12.5px; font-weight: 600; }
+  .status-pill.good { background: var(--good-soft); color: var(--good); }
+  .status-pill.bad { background: var(--bad-soft); color: var(--bad); }
+  .head-actions { display: flex; gap: 6px; }
+  .icon-btn { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-muted); }
+  .icon-btn:hover { border-color: var(--accent); color: var(--accent-strong); }
+  .icon-btn svg { width: 15px; height: 15px; }
+
+  .pool-body { padding: 18px 22px; display: flex; flex-direction: column; gap: 18px; }
+
+  .prop-bar { display: flex; height: 10px; border-radius: 100px; overflow: hidden; background: var(--surface-2); }
+  .prop-bar span:first-child { background: #5b8def; }
+  .prop-bar span:last-child { background: #e79a3d; }
+  .prop-legend { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--text-muted); margin-top: 6px; }
+
+  .range-wrap { }
+  .range-track { position: relative; height: 8px; border-radius: 100px; background: var(--surface-2); margin: 10px 0 6px; }
+  .range-fill { position: absolute; top: 0; bottom: 0; background: var(--good-soft); border-radius: 100px; }
+  .range-marker { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%; transform: translate(-50%, -50%); border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--border); }
+  .range-marker.in { background: var(--good); }
+  .range-marker.out { background: var(--bad); }
+  .range-labels { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-faint); }
+  .range-labels .cur { color: var(--text); font-weight: 600; }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 14px; }
+  .mini-stat .k { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-faint); font-weight: 600; }
+  .mini-stat .v { font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 15px; margin-top: 4px; }
+  .mini-stat .v.good { color: var(--good); } .mini-stat .v.bad { color: var(--bad); }
+  .mini-stat .sub { font-size: 11px; color: var(--text-faint); margin-top: 1px; }
+
+  footer { border-top: 1px solid var(--border); padding-top: 20px; font-size: 12.5px; color: var(--text-faint); max-width: 80ch; }
+
+  @media (max-width: 560px) {
+    .pool-head { flex-direction: column; }
+  }
+</style>
+
+<div class="wrap">
+
+  <div class="topnav">
+    <div class="nav-links">
+      <a class="btn ghost" id="navBack" href="https://claude.ai/code/artifact/b289e48a-22c2-4ffa-9eff-5d95356e1879">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        Voltar ao painel
+      </a>
+      <a class="btn ghost" id="navSim" href="https://claude.ai/code/artifact/55f2adfa-f26c-4746-a456-233f662587df">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+        Simulador
+      </a>
+    </div>
+    <div class="eyebrow"><span class="dot"></span>Uniswap V3 · controle manual</div>
+  </div>
+
+  <div>
+    <h1>Pools de liquidez</h1>
+    <p class="lede">Acompanhe suas posições de LP na Uniswap: proporção entre os ativos, se a faixa de preço está captando taxas, impermanent loss e rentabilidade. As posições das carteiras 1 e 2 são lidas direto da blockchain (NFTs de posição da Uniswap V3) sempre que você pedir uma atualização — é só dizer "atualiza minhas pools" e busco o que estiver ativo em minutos. Pools de outras carteiras podem ser adicionadas manualmente abaixo, e ficam salvas neste navegador.</p>
+  </div>
+
+  <div class="update-banner">
+    <div class="update-banner-text">
+      <strong>Abriu ou fechou uma pool?</strong>
+      <span>O botão copia o pedido pronto — cole aqui no chat com o Claude e eu atualizo com dados reais da blockchain.</span>
+    </div>
+    <div class="update-side">
+      <button class="btn primary lg" id="updateBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+        Atualizar pools
+      </button>
+      <div class="copy-toast" id="copyToast" hidden></div>
+      <div class="copy-fallback" id="copyFallback" hidden>
+        <input id="copyFallbackInput" type="text" readonly value="Atualiza minhas pools de liquidez">
+        <span class="hint">Selecionado — Ctrl+C (ou ⌘+C) e cole no chat.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="summary-strip" id="summaryStrip"></div>
+
+  <div id="emptyState" class="empty">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
+    <h3>Nenhuma pool ativa no momento</h3>
+    <p>Confirmado direto na blockchain: as carteiras 1 e 2 não têm liquidez ativa na Uniswap agora. Assim que você abrir uma posição, peça "atualiza minhas pools" e eu preencho aqui sozinho — sem precisar digitar nada. Para pools de outra carteira, adicione manualmente:</p>
+    <button class="btn primary" onclick="openForm()">+ Adicionar pool manualmente</button>
+  </div>
+
+  <div class="form-card" id="formCard">
+    <h3 id="formTitle">Nova pool</h3>
+    <div class="form-grid">
+      <div class="field"><label>Ativo A</label><input id="f_tokenA" placeholder="ETH"></div>
+      <div class="field"><label>Ativo B</label><input id="f_tokenB" placeholder="USDC"></div>
+      <div class="field"><label>Rede</label><input id="f_rede" placeholder="Base"></div>
+      <div class="field"><label>Carteira</label>
+        <select id="f_carteira"><option>Carteira 1</option><option>Carteira 2</option><option>Outra</option></select>
+      </div>
+      <div class="field"><label>Data de abertura</label><input id="f_data" type="date"></div>
+      <div class="field"><label>Faixa mínima (B por A)</label><input id="f_min" type="text" inputmode="decimal" placeholder="2200"></div>
+      <div class="field"><label>Faixa máxima (B por A)</label><input id="f_max" type="text" inputmode="decimal" placeholder="2800"></div>
+      <div class="field"><label>Preço de entrada</label><input id="f_entrada" type="text" inputmode="decimal" placeholder="2415"></div>
+      <div class="field"><label>Preço atual</label><input id="f_atual" type="text" inputmode="decimal" placeholder="2415"></div>
+      <div class="field"><label>Valor investido (US$)</label><input id="f_investido" type="text" inputmode="decimal" placeholder="5000"></div>
+      <div class="field"><label>Valor de A hoje (US$)</label><input id="f_valorA" type="text" inputmode="decimal" placeholder="2500"></div>
+      <div class="field"><label>Valor de B hoje (US$)</label><input id="f_valorB" type="text" inputmode="decimal" placeholder="2500"></div>
+      <div class="field"><label>Taxas coletadas (US$)</label><input id="f_taxas" type="text" inputmode="decimal" placeholder="0"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn ghost" onclick="closeForm()">Cancelar</button>
+      <button class="btn primary" onclick="savePool()">Salvar pool</button>
+    </div>
+  </div>
+
+  <div class="pool-list" id="poolList"></div>
+
+  <div id="addRow" style="display:none">
+    <button class="btn" onclick="openForm()">+ Adicionar pool manualmente</button>
+  </div>
+
+  <footer>
+    Posições marcadas "detectada on-chain" vêm direto do contrato NonfungiblePositionManager da Uniswap V3 (Arbitrum, Base e outras redes) para as carteiras 1 e 2, lidas sob pedido — a página em si não faz essa consulta sozinha ao carregar, por restrição de segurança do navegador. Impermanent loss estimado pela fórmula padrão (2·√k / (1+k) − 1, onde k é a razão entre o preço atual e o preço de entrada), aplicado sobre o valor investido — uma aproximação, não o valor exato do protocolo. Rentabilidade total = (valor atual + taxas coletadas − valor investido) / valor investido; rentabilidade média diária é essa rentabilidade dividida pelos dias ativos (média simples, não composta). Pools adicionadas manualmente ficam salvas apenas no armazenamento local deste navegador.
+  </footer>
+
+</div>
+
+<script>
+  const STORAGE_KEY = 'painel-cripto-lp-pools-v1';
+
+  // Populado por detectPoolsLive() quando a página consegue falar com a blockchain
+  // (hospedagem própria) — dentro do Artifact do claude.ai fica vazio e a página
+  // usa o fluxo de "peça pro Claude atualizar".
+  let AUTO_POOLS = [];
+
+  let manualPools = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  let pools = [...AUTO_POOLS.map(p => ({ ...p, auto: true })), ...manualPools];
+  let editingId = null;
+
+  function fmtUSD(n) { const s = n < 0 ? '-' : ''; return s + 'US$ ' + Math.abs(Math.round(n)).toLocaleString('pt-BR'); }
+  function fmtPct(n) { return (n >= 0 ? '+' : '') + n.toFixed(2).replace('.', ',') + '%'; }
+  function fmtNum(n, d) { return n.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d }); }
+  function daysBetween(dateStr) {
+    if (!dateStr) return 0;
+    const d = new Date(dateStr + 'T00:00:00');
+    const now = new Date();
+    return Math.max(1, Math.round((now - d) / 86400000));
+  }
+  function num(v) { const n = parseFloat(String(v).replace(/\./g, '').replace(',', '.')); return isNaN(n) ? 0 : n; }
+  function numToInput(n) { return typeof n === 'number' ? n.toLocaleString('pt-BR', { maximumFractionDigits: 8 }) : (n ?? ''); }
+
+  function openForm(pool) {
+    editingId = pool ? pool.id : null;
+    document.getElementById('formTitle').textContent = pool ? (pool.auto ? 'Completar dados da pool detectada' : 'Editar pool') : 'Nova pool';
+    const textFields = ['tokenA','tokenB','rede','data'];
+    const numFields = ['min','max','entrada','atual','investido','valorA','valorB','taxas'];
+    textFields.forEach(f => document.getElementById('f_' + f).value = pool ? (pool[f] ?? '') : '');
+    numFields.forEach(f => document.getElementById('f_' + f).value = pool ? numToInput(pool[f]) : '');
+    document.getElementById('f_carteira').value = pool ? pool.carteira : 'Carteira 1';
+    document.getElementById('formCard').classList.add('open');
+    document.getElementById('formCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  function closeForm() { document.getElementById('formCard').classList.remove('open'); editingId = null; }
+
+  function savePool() {
+    const pool = {
+      id: editingId || (Date.now() + '-' + Math.random().toString(36).slice(2)),
+      tokenA: document.getElementById('f_tokenA').value.trim() || 'A',
+      tokenB: document.getElementById('f_tokenB').value.trim() || 'B',
+      rede: document.getElementById('f_rede').value.trim() || '—',
+      carteira: document.getElementById('f_carteira').value,
+      data: document.getElementById('f_data').value,
+      min: num(document.getElementById('f_min').value),
+      max: num(document.getElementById('f_max').value),
+      entrada: num(document.getElementById('f_entrada').value),
+      atual: num(document.getElementById('f_atual').value),
+      investido: num(document.getElementById('f_investido').value),
+      valorA: num(document.getElementById('f_valorA').value),
+      valorB: num(document.getElementById('f_valorB').value),
+      taxas: num(document.getElementById('f_taxas').value),
+    };
+    const exists = editingId && manualPools.some(p => p.id === editingId);
+    if (exists) {
+      pool.id = editingId;
+      manualPools = manualPools.map(p => p.id === editingId ? pool : p);
+    } else {
+      manualPools.push(pool); // inclui o caso de "promover" uma pool detectada on-chain para edição manual
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(manualPools));
+    closeForm();
+    render();
+  }
+
+  function removePool(id) {
+    if (!confirm('Remover esta pool do controle?')) return;
+    manualPools = manualPools.filter(p => p.id !== id);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(manualPools));
+    render();
+  }
+
+  function computePool(p) {
+    const valorAtual = p.valorA + p.valorB;
+    const pctA = valorAtual > 0 ? (p.valorA / valorAtual * 100) : 50;
+    const pctB = 100 - pctA;
+    const inRange = p.atual >= p.min && p.atual <= p.max;
+    const dias = daysBetween(p.data);
+    const k = p.entrada > 0 ? p.atual / p.entrada : 1;
+    const ilPct = k > 0 ? (2 * Math.sqrt(k) / (1 + k) - 1) * 100 : 0;
+    const ilUsd = ilPct / 100 * p.investido;
+    const rentTotalPct = p.investido > 0 ? ((valorAtual + p.taxas - p.investido) / p.investido * 100) : 0;
+    const rentDiaPct = dias > 0 ? rentTotalPct / dias : 0;
+    const rangePos = p.max > p.min ? Math.min(100, Math.max(0, (p.atual - p.min) / (p.max - p.min) * 100)) : 50;
+    return { valorAtual, pctA, pctB, inRange, dias, ilPct, ilUsd, rentTotalPct, rentDiaPct, rangePos };
+  }
+
+  function renderSummary() {
+    const strip = document.getElementById('summaryStrip');
+    if (pools.length === 0) { strip.innerHTML = ''; return; }
+    let totalInvested = 0, totalValue = 0, totalFees = 0, inRangeCount = 0;
+    pools.forEach(p => {
+      const c = computePool(p);
+      totalInvested += p.investido; totalValue += c.valorAtual; totalFees += p.taxas;
+      if (c.inRange) inRangeCount++;
+    });
+    const totalPnl = totalValue + totalFees - totalInvested;
+    strip.innerHTML = `
+      <div class="stat"><div class="k">Valor em pools</div><div class="v num">${fmtUSD(totalValue)}</div></div>
+      <div class="stat"><div class="k">Taxas acumuladas</div><div class="v num good">${fmtUSD(totalFees)}</div></div>
+      <div class="stat"><div class="k">PnL total</div><div class="v num ${totalPnl >= 0 ? 'good' : 'bad'}">${fmtUSD(totalPnl)}</div></div>
+      <div class="stat"><div class="k">Na faixa agora</div><div class="v num">${inRangeCount} / ${pools.length}</div></div>
+    `;
+  }
+
+  function render() {
+    pools = [...AUTO_POOLS.map(p => ({ ...p, auto: true })), ...manualPools];
+    renderSummary();
+    document.getElementById('emptyState').style.display = pools.length === 0 ? 'flex' : 'none';
+    document.getElementById('addRow').style.display = pools.length === 0 ? 'none' : 'block';
+    const list = document.getElementById('poolList');
+    list.innerHTML = '';
+    pools.forEach(p => {
+      const c = computePool(p);
+      const card = document.createElement('div');
+      card.className = 'pool-card';
+      card.innerHTML = `
+        <div class="pool-head">
+          <div>
+            <div class="pool-pair">${p.tokenA} / ${p.tokenB}</div>
+            <div class="pool-tags">
+              ${p.auto ? '<span class="tag auto">🔗 detectada on-chain</span>' : ''}
+              <span class="tag">${p.rede}</span>
+              <span class="tag">${p.carteira}</span>
+              ${c.dias > 0 ? `<span class="tag">${c.dias} dia${c.dias === 1 ? '' : 's'} ativa</span>` : ''}
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span class="status-pill ${c.inRange ? 'good' : 'bad'}">${c.inRange ? 'Na faixa · captando taxas' : 'Fora da faixa · sem captar taxas'}</span>
+            <div class="head-actions">
+              <span class="icon-btn" title="${p.auto ? 'Completar dados (investido, data, preço de entrada)' : 'Editar'}" onclick='openForm(${JSON.stringify(p)})'>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"></path></svg>
+              </span>
+              ${p.auto ? '' : `
+              <span class="icon-btn" title="Remover" onclick="removePool('${p.id}')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>
+              </span>`}
+            </div>
+          </div>
+        </div>
+        <div class="pool-body">
+          <div>
+            <div class="prop-bar"><span style="width:${c.pctA}%"></span><span style="width:${c.pctB}%"></span></div>
+            <div class="prop-legend">
+              <span>${p.tokenA} · ${c.pctA.toFixed(0)}% (${fmtUSD(p.valorA)})</span>
+              <span>${p.tokenB} · ${c.pctB.toFixed(0)}% (${fmtUSD(p.valorB)})</span>
+            </div>
+          </div>
+          <div class="range-wrap">
+            <div class="range-track">
+              <div class="range-fill" style="left:0;right:0;"></div>
+              <div class="range-marker ${c.inRange ? 'in' : 'out'}" style="left:${c.rangePos}%"></div>
+            </div>
+            <div class="range-labels">
+              <span>mín ${fmtNum(p.min, 2)}</span>
+              <span class="cur">atual ${fmtNum(p.atual, 2)}</span>
+              <span>máx ${fmtNum(p.max, 2)}</span>
+            </div>
+          </div>
+          <div class="stats-grid">
+            <div class="mini-stat"><div class="k">Investido</div><div class="v num">${fmtUSD(p.investido)}</div></div>
+            <div class="mini-stat"><div class="k">Valor atual</div><div class="v num">${fmtUSD(c.valorAtual)}</div></div>
+            <div class="mini-stat"><div class="k">Taxas coletadas</div><div class="v num good">${fmtUSD(p.taxas)}</div></div>
+            <div class="mini-stat"><div class="k">Impermanent loss</div><div class="v num ${c.ilPct < -0.01 ? 'bad' : ''}">${fmtPct(c.ilPct)}</div><div class="sub num">${fmtUSD(c.ilUsd)}</div></div>
+            <div class="mini-stat"><div class="k">Rentabilidade total</div><div class="v num ${c.rentTotalPct >= 0 ? 'good' : 'bad'}">${fmtPct(c.rentTotalPct)}</div></div>
+            <div class="mini-stat"><div class="k">Média diária</div><div class="v num ${c.rentDiaPct >= 0 ? 'good' : 'bad'}">${fmtPct(c.rentDiaPct)}</div></div>
+          </div>
+          ${p.auto ? `<div style="font-size:12px;color:var(--text-faint)">${p.usdEstimated ? `Sem cotação USD para ${p.tokenA} — valores em termos de ${p.tokenB}.` : ''} Clique no lápis para adicionar valor investido, preço de entrada e data de abertura e liberar IL e rentabilidade reais.</div>` : ''}
+        </div>
+      `;
+      list.appendChild(card);
+    });
+  }
+
+  render();
+
+  const REQUEST_TEXT = 'Atualiza minhas pools de liquidez';
+  let toastTimer = null;
+  function showToast(msg) {
+    const t = document.getElementById('copyToast');
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.hidden = true; }, 4500);
+  }
+  let liveMode = false;
+  document.getElementById('updateBtn').addEventListener('click', async () => {
+    if (liveMode) {
+      showToast('Consultando a blockchain...');
+      try { await runLiveDetection(); showToast('Pools atualizadas agora mesmo.'); }
+      catch (e) { showToast('Não consegui consultar agora — tente de novo em instantes.'); }
+      return;
+    }
+    document.getElementById('copyFallback').hidden = true;
+    try {
+      await navigator.clipboard.writeText(REQUEST_TEXT);
+      showToast('Copiado! Cole aqui no chat com o Claude para atualizar.');
+    } catch (e) {
+      const box = document.getElementById('copyFallback');
+      const input = document.getElementById('copyFallbackInput');
+      box.hidden = false;
+      input.focus();
+      input.select();
+      try {
+        document.execCommand('copy');
+        showToast('Copiado! Cole aqui no chat com o Claude para atualizar.');
+      } catch (e2) { /* usuário copia manualmente pelo campo acima */ }
+    }
+  });
+
+  // ---- Navegação: absoluta no claude.ai, relativa quando hospedado fora ----
+  const ON_CLAUDE = location.hostname.endsWith('claude.ai');
+  if (!ON_CLAUDE) {
+    document.getElementById('navBack').href = 'index.html';
+    document.getElementById('navSim').href = 'simulador.html';
+  }
+
+  // ---- Detecção ao vivo de posições Uniswap V3 (funciona quando hospedado fora do sandbox do Artifact) ----
+  const UNI_CHAINS = {
+    Arbitrum: { rpc: 'https://arbitrum-one-rpc.publicnode.com', posManager: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88', factory: '0x1F98431c8aD98523631AE4a59f267346ea31F984' },
+    Base:     { rpc: 'https://base.publicnode.com',             posManager: '0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1', factory: '0x33128a8fC17869897dcE68Ed026d694621f6FDfD' },
+    Polygon:  { rpc: 'https://polygon-bor-rpc.publicnode.com',   posManager: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88', factory: '0x1F98431c8aD98523631AE4a59f267346ea31F984' },
+  };
+  const UNI_WALLETS = { 'Carteira 1': '0x2af9997fc77e50a3cde92b6452ee2faa0ddf2a47', 'Carteira 2': '0x68f0271fd7d9813f951419a1108fc1c9c0ba2072' };
+
+  function padHexU(h) { return h.padStart(64, '0'); }
+  function toSignedTick(v) { return v > 8388607 ? v - 16777216 : v; }
+  async function ethCallBatch(rpc, calls) {
+    if (calls.length === 0) return {};
+    const body = JSON.stringify(calls.map(c => ({ jsonrpc: '2.0', id: c.id, method: 'eth_call', params: [{ to: c.to, data: c.data }, 'latest'] })));
+    const res = await fetch(rpc, { method: 'POST', headers: { 'content-type': 'application/json' }, body });
+    const arr = await res.json();
+    const map = {};
+    (Array.isArray(arr) ? arr : [arr]).forEach(r => { map[r.id] = r.result; });
+    return map;
+  }
+  function decodeAsciiString(hex) {
+    if (!hex) return '?';
+    const clean = hex.slice(2);
+    try {
+      const len = parseInt(clean.slice(64, 128), 16);
+      if (len > 0 && len < 64) {
+        let s = '';
+        for (let i = 0; i < len * 2; i += 2) s += String.fromCharCode(parseInt(clean.slice(128 + i, 130 + i), 16));
+        if (s.trim()) return s;
+      }
+    } catch (e) { /* tenta bytes32 abaixo */ }
+    let s = '';
+    for (let i = 0; i < 64; i += 2) { const b = parseInt(clean.slice(i, i + 2), 16); if (!b) break; s += String.fromCharCode(b); }
+    return s || '?';
+  }
+
+  async function detectPoolsLive() {
+    let priceMap = {};
+    try {
+      const p = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd').then(r => r.json());
+      priceMap = { WBTC: p.bitcoin.usd, cbBTC: p.bitcoin.usd, BTC: p.bitcoin.usd, WETH: p.ethereum.usd, ETH: p.ethereum.usd, USDC: 1, USDT: 1, DAI: 1, USDbC: 1 };
+    } catch (e) { /* segue sem preço USD — mostra valor em termos do ativo B */ }
+
+    const found = [];
+    for (const [walletId, owner] of Object.entries(UNI_WALLETS)) {
+      for (const [chainName, cfg] of Object.entries(UNI_CHAINS)) {
+        const balRes = await ethCallBatch(cfg.rpc, [{ id: 'b', to: cfg.posManager, data: '0x70a08231' + padHexU(owner.slice(2).toLowerCase()) }]);
+        const n = parseInt(balRes.b, 16) || 0;
+        if (n === 0) continue;
+
+        const idxCalls = [];
+        for (let i = 0; i < n; i++) idxCalls.push({ id: i, to: cfg.posManager, data: '0x2f745c59' + padHexU(owner.slice(2).toLowerCase()) + padHexU(i.toString(16)) });
+        const idxRes = await ethCallBatch(cfg.rpc, idxCalls);
+        const tokenIds = [];
+        for (let i = 0; i < n; i++) if (idxRes[i]) tokenIds.push(parseInt(idxRes[i], 16));
+
+        const posCalls = tokenIds.map((tid, i) => ({ id: i, to: cfg.posManager, data: '0x99fbab88' + padHexU(tid.toString(16)) }));
+        const posRes = await ethCallBatch(cfg.rpc, posCalls);
+        const activePositions = [];
+        tokenIds.forEach((tid, i) => {
+          const r = posRes[i];
+          if (!r) return;
+          const hex = r.slice(2);
+          const liquidity = BigInt('0x' + hex.slice(224 * 2, 224 * 2 + 64));
+          if (liquidity === 0n) return;
+          activePositions.push({
+            tid,
+            token0: '0x' + hex.slice(64 * 2, 64 * 2 + 64).slice(24),
+            token1: '0x' + hex.slice(96 * 2, 96 * 2 + 64).slice(24),
+            fee: parseInt(hex.slice(128 * 2, 128 * 2 + 64), 16),
+            tickLower: toSignedTick(parseInt(hex.slice(160 * 2, 160 * 2 + 64), 16)),
+            tickUpper: toSignedTick(parseInt(hex.slice(192 * 2, 192 * 2 + 64), 16)),
+            liquidity,
+            tokensOwed0: BigInt('0x' + hex.slice(320 * 2, 320 * 2 + 64)),
+            tokensOwed1: BigInt('0x' + hex.slice(352 * 2, 352 * 2 + 64)),
+          });
+        });
+        if (activePositions.length === 0) continue;
+
+        for (const pos of activePositions) {
+          const poolData = '0x1698ee82' + padHexU(pos.token0.slice(2)) + padHexU(pos.token1.slice(2)) + padHexU(pos.fee.toString(16));
+          const poolRes = await ethCallBatch(cfg.rpc, [{ id: 'pool', to: cfg.factory, data: poolData }]);
+          const poolAddr = '0x' + poolRes.pool.slice(-40);
+          const metaRes = await ethCallBatch(cfg.rpc, [
+            { id: 'slot0', to: poolAddr, data: '0x3850c7bd' },
+            { id: 'sym0', to: pos.token0, data: '0x95d89b41' },
+            { id: 'dec0', to: pos.token0, data: '0x313ce567' },
+            { id: 'sym1', to: pos.token1, data: '0x95d89b41' },
+            { id: 'dec1', to: pos.token1, data: '0x313ce567' },
+          ]);
+          const currentTick = toSignedTick(parseInt(metaRes.slot0.slice(2).slice(64, 128), 16));
+          const symbol0 = decodeAsciiString(metaRes.sym0);
+          const symbol1 = decodeAsciiString(metaRes.sym1);
+          const dec0 = parseInt(metaRes.dec0, 16);
+          const dec1 = parseInt(metaRes.dec1, 16);
+
+          const priceOf = (tick) => Math.pow(1.0001, tick) * Math.pow(10, dec0 - dec1);
+          const minPrice = priceOf(pos.tickLower);
+          const maxPrice = priceOf(pos.tickUpper);
+          const curPrice = priceOf(currentTick);
+
+          const L = Number(pos.liquidity);
+          const sqrtL = Math.pow(1.0001, pos.tickLower / 2);
+          const sqrtU = Math.pow(1.0001, pos.tickUpper / 2);
+          const sqrtC = Math.pow(1.0001, currentTick / 2);
+          let raw0 = 0, raw1 = 0;
+          if (currentTick <= pos.tickLower) { raw0 = L * (1 / sqrtL - 1 / sqrtU); }
+          else if (currentTick >= pos.tickUpper) { raw1 = L * (sqrtU - sqrtL); }
+          else { raw0 = L * (1 / sqrtC - 1 / sqrtU); raw1 = L * (sqrtC - sqrtL); }
+          const amount0 = raw0 / Math.pow(10, dec0);
+          const amount1 = raw1 / Math.pow(10, dec1);
+          const owed0 = Number(pos.tokensOwed0) / Math.pow(10, dec0);
+          const owed1 = Number(pos.tokensOwed1) / Math.pow(10, dec1);
+
+          const price0USD = priceMap[symbol0], price1USD = priceMap[symbol1];
+          const hasUsd = price0USD != null && price1USD != null;
+          const valorA = hasUsd ? amount0 * price0USD : amount0 * curPrice;
+          const valorB = hasUsd ? amount1 * price1USD : amount1;
+          const taxasUsd = hasUsd ? (owed0 * price0USD + owed1 * price1USD) : (owed0 * curPrice + owed1);
+
+          found.push({
+            id: `auto-${chainName}-${pos.tid}`,
+            tokenA: symbol0, tokenB: symbol1,
+            rede: chainName, carteira: walletId,
+            data: '', min: minPrice, max: maxPrice, entrada: curPrice, atual: curPrice,
+            investido: 0, valorA, valorB, taxas: taxasUsd,
+            usdEstimated: !hasUsd,
+          });
+        }
+      }
+    }
+    return found;
+  }
+
+  async function runLiveDetection() {
+    AUTO_POOLS = await detectPoolsLive();
+    render();
+    liveMode = true;
+    document.getElementById('updateBtn').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>Atualizar pools agora';
+    document.querySelector('.update-banner-text strong').textContent = 'Dados ao vivo';
+    document.querySelector('.update-banner-text span').textContent = 'Posições lidas direto da blockchain agora mesmo. Clique para consultar de novo quando quiser.';
+    const emptyP = document.querySelector('#emptyState p');
+    if (emptyP) emptyP.textContent = 'Confirmado agora mesmo, direto na blockchain: nenhuma liquidez ativa nas carteiras 1 e 2. Assim que você abrir uma posição, é só clicar em "Atualizar pools agora".';
+  }
+
+  runLiveDetection().catch(() => {
+    // Bloqueado (sandbox do Artifact) ou sem rede — mantém o fluxo de pedir atualização ao Claude.
+  });
+</script>
