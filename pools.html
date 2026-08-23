@@ -457,7 +457,12 @@
   const UNI_WALLETS = { 'Carteira 1': '0x2af9997fc77e50a3cde92b6452ee2faa0ddf2a47', 'Carteira 2': '0x68f0271fd7d9813f951419a1108fc1c9c0ba2072' };
 
   function padHexU(h) { return h.padStart(64, '0'); }
-  function toSignedTick(v) { return v > 8388607 ? v - 16777216 : v; }
+  // Cada palavra de retorno ABI tem 32 bytes com extensão de sinal — para números negativos
+  // (a maioria dos ticks de pools reais) isso só decodifica certo com aritmética de 256 bits.
+  function decodeSignedWord(hex64) {
+    const v = BigInt('0x' + hex64);
+    return Number(v >= (2n ** 255n) ? v - (2n ** 256n) : v);
+  }
   async function ethCallBatch(rpc, calls) {
     if (calls.length === 0) return {};
     const body = JSON.stringify(calls.map(c => ({ jsonrpc: '2.0', id: c.id, method: 'eth_call', params: [{ to: c.to, data: c.data }, 'latest'] })));
@@ -517,8 +522,8 @@
             token0: '0x' + hex.slice(64 * 2, 64 * 2 + 64).slice(24),
             token1: '0x' + hex.slice(96 * 2, 96 * 2 + 64).slice(24),
             fee: parseInt(hex.slice(128 * 2, 128 * 2 + 64), 16),
-            tickLower: toSignedTick(parseInt(hex.slice(160 * 2, 160 * 2 + 64), 16)),
-            tickUpper: toSignedTick(parseInt(hex.slice(192 * 2, 192 * 2 + 64), 16)),
+            tickLower: decodeSignedWord(hex.slice(160 * 2, 160 * 2 + 64)),
+            tickUpper: decodeSignedWord(hex.slice(192 * 2, 192 * 2 + 64)),
             liquidity,
             tokensOwed0: BigInt('0x' + hex.slice(320 * 2, 320 * 2 + 64)),
             tokensOwed1: BigInt('0x' + hex.slice(352 * 2, 352 * 2 + 64)),
@@ -537,7 +542,7 @@
             { id: 'sym1', to: pos.token1, data: '0x95d89b41' },
             { id: 'dec1', to: pos.token1, data: '0x313ce567' },
           ]);
-          const currentTick = toSignedTick(parseInt(metaRes.slot0.slice(2).slice(64, 128), 16));
+          const currentTick = decodeSignedWord(metaRes.slot0.slice(2).slice(64, 128));
           const symbol0 = decodeAsciiString(metaRes.sym0);
           const symbol1 = decodeAsciiString(metaRes.sym1);
           const dec0 = parseInt(metaRes.dec0, 16);
