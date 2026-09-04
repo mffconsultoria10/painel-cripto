@@ -553,6 +553,7 @@
             <tr><td class="asset"><span class="asset-dot" style="background:#8a63d2"></span>SOL (Wormhole)</td><td class="num" id="w1solQty">1,7904</td><td class="num muted" id="w1solPrice">93,29</td><td class="num" id="w1solVal">US$ 167,03</td></tr>
             <tr><td class="asset"><span class="asset-dot" style="background:#8a63d2"></span>POL</td><td class="num" id="w1polQty">689,9944</td><td class="num muted" id="w1polPrice">0,1041</td><td class="num" id="w1polVal">US$ 71,85</td></tr>
             <tr><td class="asset"><span class="asset-dot" style="background:#ec5f8a"></span>UNI</td><td class="num" id="w1uniQty">8,9983</td><td class="num muted" id="w1uniPrice">4,29</td><td class="num" id="w1uniVal">US$ 38,64</td></tr>
+            <tr><td class="asset"><span class="asset-dot" style="background:#2775CA"></span>USDC</td><td class="num" id="w1usdcQty">—</td><td class="num muted">1,00</td><td class="num" id="w1usdcVal">US$ 0</td></tr>
             <tr><td class="asset muted">Outros (saldo residual)</td><td class="num muted">—</td><td class="num muted">—</td><td class="num muted">≈ US$ 29,61</td></tr>
           </tbody>
         </table>
@@ -574,6 +575,7 @@
             <tr><td class="asset"><span class="asset-dot" style="background:#8a92b2"></span>WETH</td><td class="num" id="w2wethQty">0,0229</td><td class="num muted" id="w2wethPrice">2.415,62</td><td class="num" id="w2wethVal">US$ 55,21</td></tr>
             <tr><td class="asset"><span class="asset-dot" style="background:#8a92b2"></span>ETH (3 redes)</td><td class="num" id="w2ethQty">0,0283</td><td class="num muted" id="w2ethPrice">2.415,62</td><td class="num" id="w2ethVal">US$ 68,35</td></tr>
             <tr><td class="asset"><span class="asset-dot" style="background:#8a63d2"></span>POL</td><td class="num" id="w2polQty">50,0000</td><td class="num muted" id="w2polPrice">0,1041</td><td class="num" id="w2polVal">US$ 5,21</td></tr>
+            <tr><td class="asset"><span class="asset-dot" style="background:#2775CA"></span>USDC</td><td class="num" id="w2usdcQty">—</td><td class="num muted">1,00</td><td class="num" id="w2usdcVal">US$ 0</td></tr>
             <tr><td class="asset muted">MON, WGC (pó)</td><td class="num muted">—</td><td class="num muted">—</td><td class="num muted">≈ US$ 0,03</td></tr>
           </tbody>
         </table>
@@ -774,6 +776,18 @@
   let spotLive = { 'Carteira 1': 16844 - 29.61, 'Carteira 2': 1284 - 0.03 };
   let aaveNet = { 'Carteira 1': 14669 + 11866, 'Carteira 2': 1700 + 1072 };
   let poolsLive = { 'Carteira 1': 0, 'Carteira 2': 0 }; // valor em pools Uniswap V3, somado quando detectado
+  // Linha "USDC em carteira / Aave / rewards" da tabela de exposição: soma spot + Aave + Merkl.
+  // spotLive já inclui o USDC (preço 1) no total da carteira — aqui é só composição/exibição.
+  let usdcSpot = { 'Carteira 1': 0, 'Carteira 2': 0 };
+  let usdcAaveMerkl = { 'Carteira 1': 0, 'Carteira 2': 0 };
+  function updateUsdcRow() {
+    const u1 = usdcSpot['Carteira 1'] + usdcAaveMerkl['Carteira 1'];
+    const u2 = usdcSpot['Carteira 2'] + usdcAaveMerkl['Carteira 2'];
+    document.getElementById('usdcC1').textContent = u1 > 0 ? u1.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
+    document.getElementById('usdcC2').textContent = u2 > 0 ? u2.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
+    document.getElementById('usdcTotalQty').textContent = (u1 + u2).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('usdcUSD').textContent = fmtUSD2(u1 + u2);
+  }
 
   function recomputeTotals() {
     const w1 = SPOT_STATIC['Carteira 1'] + spotLive['Carteira 1'] + aaveNet['Carteira 1'] + poolsLive['Carteira 1'];
@@ -856,21 +870,18 @@
     };
     const MERKL_REWARD = { 'Carteira 1': 0, 'Carteira 2': 1.73 }; // recompensa parada, sem fonte on-chain simples
     try {
-      const usdcByWallet = { 'Carteira 1': 0, 'Carteira 2': 0 };
+      const byWallet = { 'Carteira 1': 0, 'Carteira 2': 0 };
       for (const [chainName, aTok] of Object.entries(AUSDC)) {
         const cfg = AAVE_CHAINS[chainName];
         for (const [walletId, owner] of Object.entries(AAVE_WALLETS)) {
           const bal = await ethCall(cfg.rpc, aTok, '0x70a08231' + padHex(owner.slice(2).toLowerCase()));
-          usdcByWallet[walletId] += Number(BigInt(bal)) / 1e6;
+          byWallet[walletId] += Number(BigInt(bal)) / 1e6;
         }
       }
-      usdcByWallet['Carteira 1'] += MERKL_REWARD['Carteira 1'];
-      usdcByWallet['Carteira 2'] += MERKL_REWARD['Carteira 2'];
-      const u1 = usdcByWallet['Carteira 1'], u2 = usdcByWallet['Carteira 2'];
-      document.getElementById('usdcC1').textContent = u1 > 0 ? u1.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
-      document.getElementById('usdcC2').textContent = u2 > 0 ? u2.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
-      document.getElementById('usdcTotalQty').textContent = (u1 + u2).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      document.getElementById('usdcUSD').textContent = fmtUSD2(u1 + u2);
+      byWallet['Carteira 1'] += MERKL_REWARD['Carteira 1'];
+      byWallet['Carteira 2'] += MERKL_REWARD['Carteira 2'];
+      usdcAaveMerkl = byWallet;
+      updateUsdcRow();
     } catch (e) { /* mantém o valor do snapshot nessa linha */ }
 
     aaveNet = walletNet;
@@ -904,6 +915,10 @@
     ethWETH: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
     polyUNI: '0xb33EaAd8d922B1083446DC23f610c2567fB5180f',
     polySOL: '0xD93f7E271cB87c23AAa73edC008A79646d1F9912',
+    baseUSDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+    arbUSDC: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+    polyUSDC: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
+    ethUSDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
   };
   // aTokens (Aave) usados só para compor a exposição real de BTC/ETH por carteira (spot + fornecido no Aave),
   // e assim calcular a variação de 24h de cada carteira com o peso certo — não o mesmo número genérico pras duas.
@@ -930,15 +945,20 @@
     const uniPrice = (priceData.uniswap || {}).usd || 0;
     const hypePrice = (priceData.hyperliquid || {}).usd || 0;
 
-    const [w1EthQty, w1WethQty, w1CbbtcQty, w1PolQty, w1UniQty, w1SolQty] = await Promise.all([
+    const [w1EthQty, w1WethQty, w1CbbtcQty, w1PolQty, w1UniQty, w1SolQty, w1BaseUsdc, w1ArbUsdc, w1PolyUsdc, w1EthUsdc] = await Promise.all([
       nativeBal(RPC.base, w1),
       erc20Bal(RPC.base, SPOT_TOKENS.baseWETH, w1, 18),
       erc20Bal(RPC.base, SPOT_TOKENS.baseCbBTC, w1, 8),
       nativeBal(RPC.polygon, w1),
       erc20Bal(RPC.polygon, SPOT_TOKENS.polyUNI, w1, 18),
       erc20Bal(RPC.polygon, SPOT_TOKENS.polySOL, w1, 9),
+      erc20Bal(RPC.base, SPOT_TOKENS.baseUSDC, w1, 6),
+      erc20Bal(RPC.arbitrum, SPOT_TOKENS.arbUSDC, w1, 6),
+      erc20Bal(RPC.polygon, SPOT_TOKENS.polyUSDC, w1, 6),
+      erc20Bal(RPC.ethereum, SPOT_TOKENS.ethUSDC, w1, 6),
     ]);
-    const [w2BaseEth, w2ArbEth, w2EthEth, w2WbtcQty, w2WethQty, w2PolQty, w2HypeQty] = await Promise.all([
+    const w1UsdcQty = w1BaseUsdc + w1ArbUsdc + w1PolyUsdc + w1EthUsdc;
+    const [w2BaseEth, w2ArbEth, w2EthEth, w2WbtcQty, w2WethQty, w2PolQty, w2HypeQty, w2BaseUsdc, w2ArbUsdc, w2PolyUsdc, w2EthUsdc] = await Promise.all([
       nativeBal(RPC.base, w2),
       nativeBal(RPC.arbitrum, w2),
       nativeBal(RPC.ethereum, w2),
@@ -946,8 +966,13 @@
       erc20Bal(RPC.ethereum, SPOT_TOKENS.ethWETH, w2, 18),
       nativeBal(RPC.polygon, w2),
       nativeBal(RPC.hyperevm, w2),
+      erc20Bal(RPC.base, SPOT_TOKENS.baseUSDC, w2, 6),
+      erc20Bal(RPC.arbitrum, SPOT_TOKENS.arbUSDC, w2, 6),
+      erc20Bal(RPC.polygon, SPOT_TOKENS.polyUSDC, w2, 6),
+      erc20Bal(RPC.ethereum, SPOT_TOKENS.ethUSDC, w2, 6),
     ]);
     const w2EthQty = w2BaseEth + w2ArbEth + w2EthEth;
+    const w2UsdcQty = w2BaseUsdc + w2ArbUsdc + w2PolyUsdc + w2EthUsdc;
 
     // Saldo fornecido no Aave (WBTC/WETH/cbBTC) por carteira, pra saber a exposição real de cada uma a BTC/ETH.
     const [w1AavePolyWbtc, w1AaveArbWbtc, w1AavePolyWeth, w1AaveArbWeth] = await Promise.all([
@@ -978,8 +1003,14 @@
     setSpotCell('w2pol', w2PolQty, polPrice);
     setSpotCell('w2hype', w2HypeQty, hypePrice);
 
-    spotLive['Carteira 1'] = w1CbbtcQty * btcPrice + w1EthQty * ethPrice + w1WethQty * ethPrice + w1PolQty * polPrice + w1UniQty * uniPrice + w1SolQty * solPrice;
-    spotLive['Carteira 2'] = w2WbtcQty * btcPrice + w2WethQty * ethPrice + w2EthQty * ethPrice + w2PolQty * polPrice + w2HypeQty * hypePrice;
+    spotLive['Carteira 1'] = w1CbbtcQty * btcPrice + w1EthQty * ethPrice + w1WethQty * ethPrice + w1PolQty * polPrice + w1UniQty * uniPrice + w1SolQty * solPrice + w1UsdcQty;
+    spotLive['Carteira 2'] = w2WbtcQty * btcPrice + w2WethQty * ethPrice + w2EthQty * ethPrice + w2PolQty * polPrice + w2HypeQty * hypePrice + w2UsdcQty;
+    usdcSpot = { 'Carteira 1': w1UsdcQty, 'Carteira 2': w2UsdcQty };
+    updateUsdcRow();
+    document.getElementById('w1usdcQty').textContent = w1UsdcQty > 0 ? w1UsdcQty.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
+    document.getElementById('w1usdcVal').textContent = fmtUSD2(w1UsdcQty);
+    document.getElementById('w2usdcQty').textContent = w2UsdcQty > 0 ? w2UsdcQty.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
+    document.getElementById('w2usdcVal').textContent = fmtUSD2(w2UsdcQty);
 
     recomputeTotals();
     document.getElementById('spotLiveBadge').hidden = false;
