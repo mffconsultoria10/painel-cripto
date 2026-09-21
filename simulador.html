@@ -179,12 +179,12 @@
         Pools de liquidez
       </a>
     </div>
-    <div class="eyebrow"><span class="dot"></span>Baseado no snapshot de 22/08/2026</div>
+    <div class="eyebrow"><span class="dot"></span><span id="snapshotNote">Baseado no snapshot de 22/08/2026</span></div>
   </div>
 
   <div>
     <h1>Simulador de patrimônio</h1>
-    <p class="lede">Ajuste o preço do BTC, do ETH e a cotação do dólar para ver como o patrimônio total e a saúde das 4 posições no Aave V3 reagiriam. Os demais ativos (SOL, POL, UNI, HYPE e saldos residuais) são mantidos constantes em US$ 564,47.</p>
+    <p class="lede">Ajuste o preço do BTC, do ETH e a cotação do dólar para ver como o patrimônio total e a saúde das posições no Aave V3 reagiriam. Os demais ativos (SOL, POL, UNI, HYPE e saldos residuais) são mantidos constantes em <span id="otherLede">US$ 564,47</span>.</p>
   </div>
 
   <div class="controls-grid">
@@ -194,7 +194,7 @@
         <span class="control-label">Preço do BTC</span>
         <span class="control-value num" id="btcVal">US$ 77.047</span>
       </div>
-      <input type="range" id="btcRange" min="15000" max="220000" step="500" value="77047">
+      <input type="range" id="btcRange" min="15000" max="220000" step="1" value="77047">
       <div class="range-scale"><span>15.000</span><span>220.000</span></div>
       <div class="chip-row">
         <span class="chip" data-target="btc" data-pct="-0.5">-50%</span>
@@ -211,7 +211,7 @@
         <span class="control-label">Preço do ETH</span>
         <span class="control-value num" id="ethVal">US$ 2.415</span>
       </div>
-      <input type="range" id="ethRange" min="400" max="10000" step="25" value="2415">
+      <input type="range" id="ethRange" min="400" max="10000" step="1" value="2415">
       <div class="range-scale"><span>400</span><span>10.000</span></div>
       <div class="chip-row">
         <span class="chip" data-target="eth" data-pct="-0.5">-50%</span>
@@ -230,7 +230,7 @@
       </div>
       <input type="range" id="fxRange" min="350" max="750" step="1" value="520">
       <div class="range-scale"><span>3,50</span><span>7,50</span></div>
-      <div class="chip-row">
+      <div class="chip-row" id="fxChips">
         <span class="chip" data-target="fx" data-set="480">4,80</span>
         <span class="chip" data-target="fx" data-set="520">5,20</span>
         <span class="chip" data-target="fx" data-set="560">5,60</span>
@@ -285,92 +285,135 @@
         <tbody>
           <tr><td class="asset">BTC (cbBTC + WBTC, carteira + Aave)</td><td class="num" id="btcQty">0,6374</td><td class="num" id="btcUsd">US$ 49.113</td><td class="num" id="btcBrl">R$ 255.388</td></tr>
           <tr><td class="asset">ETH (ETH + WETH, carteira + Aave)</td><td class="num" id="ethQty">4,5402</td><td class="num" id="ethUsd">US$ 10.966</td><td class="num" id="ethBrl">R$ 57.023</td></tr>
-          <tr><td class="asset muted">USDC em carteira / Aave / rewards</td><td class="num muted">299,59</td><td class="num">US$ 299,59</td><td class="num muted" id="usdcAssetBrl">R$ 1.558</td></tr>
-          <tr><td class="asset" style="color:var(--bad)">USDC emprestado (passivo Aave)</td><td class="num" style="color:var(--bad)">− 13.504,82</td><td class="num" style="color:var(--bad)">− US$ 13.504,82</td><td class="num" style="color:var(--bad)" id="usdcDebtBrl">− R$ 70.225</td></tr>
-          <tr><td class="asset muted">Outros ativos (SOL, POL, UNI, HYPE, resíduos — constantes)</td><td class="num muted">—</td><td class="num">US$ 564,47</td><td class="num muted" id="otherBrl">R$ 2.935</td></tr>
+          <tr id="poolsRow" style="display:none"><td class="asset">Em pools de liquidez (Uniswap V3)</td><td class="num muted">—</td><td class="num" id="poolsUsd">US$ 0</td><td class="num muted" id="poolsBrl">R$ 0</td></tr>
+          <tr><td class="asset muted">USDC em carteira / Aave</td><td class="num muted" id="usdcQty">299,59</td><td class="num" id="usdcUsd">US$ 299,59</td><td class="num muted" id="usdcAssetBrl">R$ 1.558</td></tr>
+          <tr><td class="asset" style="color:var(--bad)">USDC emprestado (passivo Aave)</td><td class="num" style="color:var(--bad)" id="debtQty">− 13.504,82</td><td class="num" style="color:var(--bad)" id="debtUsd">− US$ 13.504,82</td><td class="num" style="color:var(--bad)" id="usdcDebtBrl">− R$ 70.225</td></tr>
+          <tr><td class="asset muted">Outros ativos (SOL, POL, UNI, HYPE, resíduos — constantes)</td><td class="num muted">—</td><td class="num" id="otherUsd">US$ 564,47</td><td class="num muted" id="otherBrl">R$ 2.935</td></tr>
           <tr class="total"><td colspan="2">Total simulado</td><td class="num" id="totalRow">US$ 47.437</td><td class="num" id="totalRowBrl">R$ 246.632</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <footer>
-    Modelo aproximado: o limite de liquidação de cada posição foi inferido a partir do Health Factor e da composição atuais no DeBank (22/08/2026) e mantido fixo; a dívida em USDC não é recalculada por juros acumulados; SOL, POL, UNI, HYPE e saldos residuais são mantidos constantes. Use como referência de cenário, não como garantia de comportamento real do protocolo.
+  <footer id="simFooter">
+    Modelo aproximado: o limite de liquidação de cada posição fica fixo no cenário; a dívida em USDC não é recalculada por juros acumulados; SOL, POL, UNI, HYPE e saldos residuais são mantidos constantes. Use como referência de cenário, não como garantia de comportamento real do protocolo.
   </footer>
 
 </div>
 
 <script>
-  // threshold = limite de liquidação real, lido on-chain via getUserAccountData (Aave V3 Pool)
-  const positions = [
-    { wallet: 'Carteira 1', chain: 'Polygon',  btc: 0.2140, eth: 2.1636, usdc: 0,        borrowed: 7036.50, threshold: 0.7920 },
-    { wallet: 'Carteira 1', chain: 'Arbitrum', btc: 0.1925, eth: 0.8815, usdc: 0,        borrowed: 5095.41, threshold: 0.7875 },
-    { wallet: 'Carteira 2', chain: 'Arbitrum', btc: 0.0328, eth: 0,      usdc: 0,        borrowed: 827.51,  threshold: 0.7800 },
-    { wallet: 'Carteira 2', chain: 'Base',     btc: 0.0050, eth: 0.3852, usdc: 297.8045, borrowed: 541.97,  threshold: 0.8088 },
-  ];
-  const BTC_QTY = 0.6374, ETH_QTY = 4.5402;
-  const USDC_ASSET = 299.59, USDC_DEBT = 13501.39, OTHER_USD = 564.47;
-  const BASE_BTC = 77047, BASE_ETH = 2415.4, BASE_FX = 5.20;
-  const BASE_TOTAL = BTC_QTY * BASE_BTC + ETH_QTY * BASE_ETH + USDC_ASSET - USDC_DEBT + OTHER_USD;
+  // ============ Estado ============
+  // Começa com o snapshot de 22/08/2026 (funciona mesmo dentro do Artifact do claude.ai, que bloqueia consultas externas)
+  // e é substituído pelos dados on-chain assim que a página consegue lê-los (site hospedado).
+  const state = {
+    live: false,
+    base: { btc: 77047, eth: 2415.4, fx: 5.20 },
+    btcQty: 0.6374, ethQty: 4.5402,          // carteira + colateral no Aave
+    usdcAsset: 299.59, usdcDebt: 13501.39, otherUsd: 564.47,
+    positions: [
+      { wallet: 'Carteira 1', chain: 'Polygon',  btc: 0.2140, eth: 2.1636, usdc: 0,        other: 0, borrowed: 7036.50, threshold: 0.7920 },
+      { wallet: 'Carteira 1', chain: 'Arbitrum', btc: 0.1925, eth: 0.8815, usdc: 0,        other: 0, borrowed: 5095.41, threshold: 0.7875 },
+      { wallet: 'Carteira 2', chain: 'Arbitrum', btc: 0.0328, eth: 0,      usdc: 0,        other: 0, borrowed: 827.51,  threshold: 0.7800 },
+      { wallet: 'Carteira 2', chain: 'Base',     btc: 0.0050, eth: 0.3852, usdc: 297.8045, other: 0, borrowed: 541.97,  threshold: 0.8088 },
+    ],
+    pools: [],                                // posições de LP Uniswap V3 (só preenchido com dados ao vivo)
+  };
 
   const btcRange = document.getElementById('btcRange');
   const ethRange = document.getElementById('ethRange');
   const fxRange = document.getElementById('fxRange');
 
-  function fmtUSD(n) { return 'US$ ' + Math.round(n).toLocaleString('pt-BR'); }
-  function fmtBRL(n) { return 'R$ ' + Math.round(n).toLocaleString('pt-BR'); }
+  function fmtUSD(n) { return (n < 0 ? '− ' : '') + 'US$ ' + Math.abs(Math.round(n)).toLocaleString('pt-BR'); }
+  function fmtUSD2(n) { return (n < 0 ? '− ' : '') + 'US$ ' + Math.abs(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function fmtBRL(n) { return (n < 0 ? '− ' : '') + 'R$ ' + Math.abs(Math.round(n)).toLocaleString('pt-BR'); }
   function fmtQty(n) { return n.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 }); }
-  function fmtHF(n) { return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function fmtQty2(n) { return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function fmtHF(n) { return isFinite(n) ? n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '∞'; }
   function hfClass(hf) { return hf >= 1.5 ? 'good' : hf >= 1.15 ? 'warn' : 'bad'; }
 
+  // Valor de uma pool Uniswap V3 no preço simulado. Pares BTC/ETH contra stablecoin são reavaliados pela matemática
+  // de liquidez concentrada (inclui impermanent loss); os demais pares ficam no valor atual.
+  function poolValue(p, btcP, ethP) {
+    if (p.mode !== 'dynamic') return p.staticUsd;
+    const P = p.family === 'btc' ? btcP : ethP;                       // preço USD do ativo volátil
+    const scale = Math.pow(10, p.dec1 - p.dec0);
+    const rawPrice = p.volIs0 ? P * scale : scale / P;                // token1_raw / token0_raw
+    const sqrtP = Math.sqrt(rawPrice);
+    const sqrtL = Math.pow(1.0001, p.tickLower / 2), sqrtU = Math.pow(1.0001, p.tickUpper / 2);
+    let raw0 = 0, raw1 = 0;
+    if (sqrtP <= sqrtL) raw0 = p.L * (1 / sqrtL - 1 / sqrtU);
+    else if (sqrtP >= sqrtU) raw1 = p.L * (sqrtU - sqrtL);
+    else { raw0 = p.L * (1 / sqrtP - 1 / sqrtU); raw1 = p.L * (sqrtP - sqrtL); }
+    const a0 = raw0 / Math.pow(10, p.dec0), a1 = raw1 / Math.pow(10, p.dec1);
+    return p.volIs0 ? a0 * P + a1 : a0 + a1 * P;
+  }
+
+  function totalAt(btcP, ethP) {
+    const pools = state.pools.reduce((s, p) => s + poolValue(p, btcP, ethP), 0);
+    return state.btcQty * btcP + state.ethQty * ethP + state.usdcAsset - state.usdcDebt + state.otherUsd + pools;
+  }
+
   const posBody = document.getElementById('posBody');
-  positions.forEach((p, i) => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${p.wallet}</td><td class="muted">${p.chain}</td>
-      <td class="num"><span class="hf-pill" id="hfPill${i}"></span></td>
-      <td class="num" id="sup${i}"></td>
-      <td class="num">${fmtUSD(p.borrowed)}</td>
-      <td class="num" style="font-weight:600"><span id="net${i}"></span><span class="sub-brl" id="netBrl${i}"></span></td>`;
-    posBody.appendChild(tr);
-  });
+  function buildPositionsTable() {
+    posBody.innerHTML = '';
+    state.positions.forEach((p, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${p.wallet}</td><td class="muted">${p.chain}</td>
+        <td class="num"><span class="hf-pill" id="hfPill${i}"></span></td>
+        <td class="num" id="sup${i}"></td>
+        <td class="num">${fmtUSD(p.borrowed)}</td>
+        <td class="num" style="font-weight:600"><span id="net${i}"></span><span class="sub-brl" id="netBrl${i}"></span></td>`;
+      posBody.appendChild(tr);
+    });
+  }
 
   function render() {
-    const btcPrice = parseInt(btcRange.value, 10);
-    const ethPrice = parseInt(ethRange.value, 10);
+    const btcPrice = parseFloat(btcRange.value);
+    const ethPrice = parseFloat(ethRange.value);
     const fx = parseInt(fxRange.value, 10) / 100;
 
     document.getElementById('btcVal').textContent = fmtUSD(btcPrice);
     document.getElementById('ethVal').textContent = fmtUSD(ethPrice);
     document.getElementById('fxVal').textContent = 'R$ ' + fx.toFixed(2).replace('.', ',');
 
-    const btcUsd = BTC_QTY * btcPrice;
-    const ethUsd = ETH_QTY * ethPrice;
-    const total = btcUsd + ethUsd + USDC_ASSET - USDC_DEBT + OTHER_USD;
+    const btcUsd = state.btcQty * btcPrice;
+    const ethUsd = state.ethQty * ethPrice;
+    const poolsUsd = state.pools.reduce((s, p) => s + poolValue(p, btcPrice, ethPrice), 0);
+    const total = totalAt(btcPrice, ethPrice);
+    const baseTotal = totalAt(state.base.btc, state.base.eth);
     const totalBRL = total * fx;
-    const deltaPct = (total - BASE_TOTAL) / BASE_TOTAL * 100;
+    const deltaPct = baseTotal !== 0 ? (total - baseTotal) / Math.abs(baseTotal) * 100 : 0;
 
     document.getElementById('resultTotal').textContent = fmtUSD(total);
     document.getElementById('resultBRL').textContent = fmtBRL(totalBRL);
-    document.getElementById('btcQty').textContent = fmtQty(BTC_QTY);
-    document.getElementById('ethQty').textContent = fmtQty(ETH_QTY);
+    document.getElementById('btcQty').textContent = fmtQty(state.btcQty);
+    document.getElementById('ethQty').textContent = fmtQty(state.ethQty);
     document.getElementById('btcUsd').textContent = fmtUSD(btcUsd);
     document.getElementById('ethUsd').textContent = fmtUSD(ethUsd);
-    document.getElementById('totalRow').textContent = fmtUSD(total);
     document.getElementById('btcBrl').textContent = fmtBRL(btcUsd * fx);
     document.getElementById('ethBrl').textContent = fmtBRL(ethUsd * fx);
-    document.getElementById('usdcAssetBrl').textContent = fmtBRL(USDC_ASSET * fx);
-    document.getElementById('usdcDebtBrl').textContent = '− ' + fmtBRL(USDC_DEBT * fx);
-    document.getElementById('otherBrl').textContent = fmtBRL(OTHER_USD * fx);
+    document.getElementById('poolsRow').style.display = state.pools.length ? '' : 'none';
+    document.getElementById('poolsUsd').textContent = fmtUSD(poolsUsd);
+    document.getElementById('poolsBrl').textContent = fmtBRL(poolsUsd * fx);
+    document.getElementById('usdcQty').textContent = fmtQty2(state.usdcAsset);
+    document.getElementById('usdcUsd').textContent = fmtUSD2(state.usdcAsset);
+    document.getElementById('usdcAssetBrl').textContent = fmtBRL(state.usdcAsset * fx);
+    document.getElementById('debtQty').textContent = '− ' + fmtQty2(state.usdcDebt);
+    document.getElementById('debtUsd').textContent = '− ' + fmtUSD2(state.usdcDebt);
+    document.getElementById('usdcDebtBrl').textContent = '− ' + fmtBRL(state.usdcDebt * fx);
+    document.getElementById('otherUsd').textContent = fmtUSD2(state.otherUsd);
+    document.getElementById('otherBrl').textContent = fmtBRL(state.otherUsd * fx);
+    document.getElementById('totalRow').textContent = fmtUSD(total);
     document.getElementById('totalRowBrl').textContent = fmtBRL(totalBRL);
 
     const pill = document.getElementById('deltaPill');
     pill.className = 'delta-pill ' + (deltaPct > 0.05 ? 'up' : deltaPct < -0.05 ? 'down' : 'flat');
-    pill.textContent = (deltaPct >= 0 ? '▲ +' : '▼ ') + deltaPct.toFixed(2).replace('.', ',').replace('-', '') + '% vs. hoje';
+    pill.textContent = (deltaPct >= 0 ? '▲ +' : '▼ ') + Math.abs(deltaPct).toFixed(2).replace('.', ',') + '% vs. hoje';
 
     let worst = Infinity;
-    positions.forEach((p, i) => {
-      const supplied = p.btc * btcPrice + p.eth * ethPrice + p.usdc;
-      const hf = p.threshold * supplied / p.borrowed;
+    state.positions.forEach((p, i) => {
+      const supplied = p.btc * btcPrice + p.eth * ethPrice + p.usdc + p.other;
+      const hf = p.borrowed > 0 ? p.threshold * supplied / p.borrowed : Infinity;
       worst = Math.min(worst, hf);
       const cls = hfClass(hf);
       document.getElementById(`hfPill${i}`).className = 'hf-pill ' + cls;
@@ -396,24 +439,246 @@
   document.querySelectorAll('.chip[data-pct]').forEach(chip => {
     chip.addEventListener('click', () => {
       const pct = parseFloat(chip.dataset.pct);
-      if (chip.dataset.target === 'btc') btcRange.value = Math.round(BASE_BTC * (1 + pct));
-      if (chip.dataset.target === 'eth') ethRange.value = Math.round(BASE_ETH * (1 + pct));
+      if (chip.dataset.target === 'btc') btcRange.value = Math.round(state.base.btc * (1 + pct));
+      if (chip.dataset.target === 'eth') ethRange.value = Math.round(state.base.eth * (1 + pct));
       render();
     });
   });
-  document.querySelectorAll('.chip[data-set]').forEach(chip => {
-    chip.addEventListener('click', () => { fxRange.value = chip.dataset.set; render(); });
-  });
-  document.getElementById('resetBtn').addEventListener('click', () => {
-    btcRange.value = BASE_BTC; ethRange.value = Math.round(BASE_ETH); fxRange.value = Math.round(BASE_FX * 100);
-    render();
-  });
+  function bindFxChips() {
+    document.querySelectorAll('.chip[data-set]').forEach(chip => {
+      chip.onclick = () => { fxRange.value = chip.dataset.set; render(); };
+    });
+  }
+  bindFxChips();
+  function resetSliders() {
+    btcRange.value = Math.round(state.base.btc);
+    ethRange.value = Math.round(state.base.eth);
+    fxRange.value = Math.round(state.base.fx * 100);
+  }
+  document.getElementById('resetBtn').addEventListener('click', () => { resetSliders(); render(); });
 
+  buildPositionsTable();
   render();
 
-  // ---- Navegação: absoluta no claude.ai, relativa quando hospedado fora ----
-  if (!location.hostname.endsWith('claude.ai')) {
+  // ============ Navegação: absoluta no claude.ai, relativa quando hospedado fora ============
+  const ON_CLAUDE = location.hostname.endsWith('claude.ai');
+  if (!ON_CLAUDE) {
     document.getElementById('navBack').href = 'index.html';
     document.getElementById('navPools').href = 'pools.html';
   }
+
+  // ============ Leitura on-chain (só funciona fora do sandbox do Artifact) ============
+  const RPC = {
+    base: 'https://base.publicnode.com',
+    arbitrum: 'https://arbitrum-one-rpc.publicnode.com',
+    polygon: 'https://polygon-bor-rpc.publicnode.com',
+    ethereum: 'https://ethereum-rpc.publicnode.com',
+    hyperevm: 'https://rpc.hyperliquid.xyz/evm',
+  };
+  const WALLETS = {
+    'Carteira 1': '0x2af9997fc77e50a3cde92b6452ee2faa0ddf2a47',
+    'Carteira 2': '0x68f0271fd7d9813f951419a1108fc1c9c0ba2072',
+  };
+  const pad = (h) => h.padStart(64, '0');
+  async function rpcCall(rpc, method, params) {
+    const res = await fetch(rpc, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }) });
+    const j = await res.json();
+    if (j.error) throw new Error(j.error.message);
+    return j.result;
+  }
+  const ethCall = (rpc, to, data) => rpcCall(rpc, 'eth_call', [{ to, data }, 'latest']);
+  const nativeBal = async (rpc, addr) => Number(BigInt(await rpcCall(rpc, 'eth_getBalance', [addr, 'latest']))) / 1e18;
+  const erc20Bal = async (rpc, token, addr, dec) => Number(BigInt(await ethCall(rpc, token, '0x70a08231' + pad(addr.slice(2).toLowerCase())))) / Math.pow(10, dec);
+  async function ethCallBatch(rpc, calls) {
+    if (calls.length === 0) return {};
+    const body = JSON.stringify(calls.map(c => ({ jsonrpc: '2.0', id: c.id, method: 'eth_call', params: [{ to: c.to, data: c.data }, 'latest'] })));
+    const res = await fetch(rpc, { method: 'POST', headers: { 'content-type': 'application/json' }, body });
+    const arr = await res.json();
+    const map = {};
+    (Array.isArray(arr) ? arr : [arr]).forEach(r => { map[r.id] = r.result; });
+    return map;
+  }
+  function decodeSignedWord(hex64) {
+    const v = BigInt('0x' + hex64);
+    return Number(v >= (2n ** 255n) ? v - (2n ** 256n) : v);
+  }
+  function decodeAsciiString(hex) {
+    if (!hex) return '?';
+    const clean = hex.slice(2);
+    try {
+      const len = parseInt(clean.slice(64, 128), 16);
+      if (len > 0 && len < 64) {
+        let s = '';
+        for (let i = 0; i < len * 2; i += 2) s += String.fromCharCode(parseInt(clean.slice(128 + i, 130 + i), 16));
+        if (s.trim()) return s;
+      }
+    } catch (e) { /* tenta bytes32 abaixo */ }
+    let s = '';
+    for (let i = 0; i < 64; i += 2) { const b = parseInt(clean.slice(i, i + 2), 16); if (!b) break; s += String.fromCharCode(b); }
+    return s || '?';
+  }
+
+  // Aave V3: contrato Pool + aTokens (WBTC/cbBTC, WETH, USDC) de cada rede
+  const A_POLY_ARB = { btc: ['0x078f358208685046a11C85e8ad32895DED33A249'], eth: ['0xe50fA9b3c56FfB159cB0FCA61F5c9D750e8128c8'], usdc: ['0x625E7708f30cA75bfd92586e17077590C60eb4cD'] };
+  const AAVE = {
+    Polygon:  { rpc: RPC.polygon,  pool: '0x794a61358D6845594F94dc1DB02A252b5b4814aD', a: A_POLY_ARB },
+    Arbitrum: { rpc: RPC.arbitrum, pool: '0x794a61358D6845594F94dc1DB02A252b5b4814aD', a: A_POLY_ARB },
+    Base:     { rpc: RPC.base,     pool: '0xA238Dd80C259a72e81d7e4664a9801593F98d1c5', a: { btc: ['0xBdb9300b7CDE636d9cD4AFF00f6F009fFBBc8EE6'], eth: ['0xd4a0e0B9149BCee3C920d2E00b5dE09138Fd8bb7'], usdc: ['0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB'] } },
+  };
+  function decodeAave(hex) {
+    const clean = hex.slice(2);
+    const f = [];
+    for (let i = 0; i < 6; i++) f.push(BigInt('0x' + clean.slice(i * 64, (i + 1) * 64)));
+    return { collateralUSD: Number(f[0]) / 1e8, debtUSD: Number(f[1]) / 1e8, threshold: Number(f[3]) / 10000 };
+  }
+
+  // Saldo em carteira (mesma lista do painel): nativos + tokens ERC-20 conhecidos
+  const NATIVE_SPOT = [['base', 'eth'], ['arbitrum', 'eth'], ['ethereum', 'eth'], ['polygon', 'pol'], ['hyperevm', 'hype']];
+  const ERC20_SPOT = [
+    ['base', '0x4200000000000000000000000000000000000006', 18, 'eth'],   // WETH
+    ['ethereum', '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 18, 'eth'],
+    ['base', '0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf', 8, 'btc'],   // cbBTC
+    ['arbitrum', '0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f', 8, 'btc'], // WBTC
+    ['polygon', '0xb33EaAd8d922B1083446DC23f610c2567fB5180f', 18, 'uni'],
+    ['polygon', '0xD93f7E271cB87c23AAa73edC008A79646d1F9912', 9, 'sol'],
+    ['base', '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', 6, 'usdc'],
+    ['arbitrum', '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', 6, 'usdc'],
+    ['polygon', '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', 6, 'usdc'],
+    ['ethereum', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', 6, 'usdc'],
+  ];
+  const DUST_USD = 29.64; // poeira sem contrato mapeado (mesmo valor fixo do painel)
+
+  // Pools Uniswap V3
+  const UNI = {
+    Arbitrum: { rpc: RPC.arbitrum, pm: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88', factory: '0x1F98431c8aD98523631AE4a59f267346ea31F984' },
+    Base:     { rpc: RPC.base,     pm: '0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1', factory: '0x33128a8fC17869897dcE68Ed026d694621f6FDfD' },
+    Polygon:  { rpc: RPC.polygon,  pm: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88', factory: '0x1F98431c8aD98523631AE4a59f267346ea31F984' },
+  };
+  const FAMILY = { WBTC: 'btc', cbBTC: 'btc', BTC: 'btc', WETH: 'eth', ETH: 'eth' };
+  const STABLE = new Set(['USDC', 'USDT', 'DAI', 'USDbC']);
+
+  async function scanPools(px) {
+    const priceBySymbol = (s) => FAMILY[s] ? px[FAMILY[s]] : STABLE.has(s) ? 1 : (px[String(s).toLowerCase()] ?? null);
+    const pools = [];
+    for (const [wallet, owner] of Object.entries(WALLETS)) {
+      for (const [chain, cfg] of Object.entries(UNI)) {
+        const balRes = await ethCallBatch(cfg.rpc, [{ id: 'b', to: cfg.pm, data: '0x70a08231' + pad(owner.slice(2).toLowerCase()) }]);
+        const n = parseInt(balRes.b, 16) || 0;
+        if (n === 0) continue;
+        const idxCalls = [];
+        for (let i = 0; i < n; i++) idxCalls.push({ id: i, to: cfg.pm, data: '0x2f745c59' + pad(owner.slice(2).toLowerCase()) + pad(i.toString(16)) });
+        const idxRes = await ethCallBatch(cfg.rpc, idxCalls);
+        const tokenIds = [];
+        for (let i = 0; i < n; i++) if (idxRes[i]) tokenIds.push(parseInt(idxRes[i], 16));
+        const posRes = await ethCallBatch(cfg.rpc, tokenIds.map((tid, i) => ({ id: i, to: cfg.pm, data: '0x99fbab88' + pad(tid.toString(16)) })));
+        for (let i = 0; i < tokenIds.length; i++) {
+          const r = posRes[i];
+          if (!r) continue;
+          const hex = r.slice(2);
+          const liquidity = BigInt('0x' + hex.slice(224 * 2, 224 * 2 + 64));
+          if (liquidity === 0n) continue;
+          const token0 = '0x' + hex.slice(64 * 2, 64 * 2 + 64).slice(24);
+          const token1 = '0x' + hex.slice(96 * 2, 96 * 2 + 64).slice(24);
+          const fee = parseInt(hex.slice(128 * 2, 128 * 2 + 64), 16);
+          const tickLower = decodeSignedWord(hex.slice(160 * 2, 160 * 2 + 64));
+          const tickUpper = decodeSignedWord(hex.slice(192 * 2, 192 * 2 + 64));
+          const poolRes = await ethCallBatch(cfg.rpc, [{ id: 'pool', to: cfg.factory, data: '0x1698ee82' + pad(token0.slice(2)) + pad(token1.slice(2)) + pad(fee.toString(16)) }]);
+          const poolAddr = '0x' + poolRes.pool.slice(-40);
+          const meta = await ethCallBatch(cfg.rpc, [
+            { id: 'slot0', to: poolAddr, data: '0x3850c7bd' },
+            { id: 'sym0', to: token0, data: '0x95d89b41' }, { id: 'dec0', to: token0, data: '0x313ce567' },
+            { id: 'sym1', to: token1, data: '0x95d89b41' }, { id: 'dec1', to: token1, data: '0x313ce567' },
+          ]);
+          const currentTick = decodeSignedWord(meta.slot0.slice(2).slice(64, 128));
+          const sym0 = decodeAsciiString(meta.sym0), sym1 = decodeAsciiString(meta.sym1);
+          const dec0 = parseInt(meta.dec0, 16), dec1 = parseInt(meta.dec1, 16);
+          const L = Number(liquidity);
+          const sqrtL = Math.pow(1.0001, tickLower / 2), sqrtU = Math.pow(1.0001, tickUpper / 2), sqrtC = Math.pow(1.0001, currentTick / 2);
+          let raw0 = 0, raw1 = 0;
+          if (currentTick <= tickLower) raw0 = L * (1 / sqrtL - 1 / sqrtU);
+          else if (currentTick >= tickUpper) raw1 = L * (sqrtU - sqrtL);
+          else { raw0 = L * (1 / sqrtC - 1 / sqrtU); raw1 = L * (sqrtC - sqrtL); }
+          const a0 = raw0 / Math.pow(10, dec0), a1 = raw1 / Math.pow(10, dec1);
+          const p0 = priceBySymbol(sym0), p1 = priceBySymbol(sym1);
+          const pool = { wallet, chain, sym0, sym1, L, tickLower, tickUpper, dec0, dec1, mode: 'static', staticUsd: (p0 != null && p1 != null) ? a0 * p0 + a1 * p1 : 0 };
+          if (FAMILY[sym0] && STABLE.has(sym1)) Object.assign(pool, { mode: 'dynamic', volIs0: true, family: FAMILY[sym0] });
+          else if (FAMILY[sym1] && STABLE.has(sym0)) Object.assign(pool, { mode: 'dynamic', volIs0: false, family: FAMILY[sym1] });
+          pools.push(pool);
+        }
+      }
+    }
+    return pools;
+  }
+
+  async function loadLive() {
+    const [pj, fxj] = await Promise.all([
+      fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,polygon-ecosystem-token,solana,uniswap,hyperliquid&vs_currencies=usd').then(r => r.json()),
+      fetch('https://economia.awesomeapi.com.br/last/USD-BRL').then(r => r.json()),
+    ]);
+    const px = { btc: pj.bitcoin.usd, eth: pj.ethereum.usd, pol: pj['polygon-ecosystem-token'].usd, sol: pj.solana.usd, uni: pj.uniswap.usd, hype: pj.hyperliquid.usd };
+    const fx = parseFloat(fxj.USDBRL.bid);
+    if (!(px.btc > 0 && px.eth > 0 && fx > 0)) throw new Error('cotações inválidas');
+
+    // Saldo em carteira (soma das duas carteiras)
+    const spot = { btc: 0, eth: 0, usdc: 0, pol: 0, sol: 0, uni: 0, hype: 0 };
+    const jobs = [];
+    for (const owner of Object.values(WALLETS)) {
+      NATIVE_SPOT.forEach(([chain, key]) => jobs.push(nativeBal(RPC[chain], owner).then(v => { spot[key] += v; })));
+      ERC20_SPOT.forEach(([chain, token, dec, key]) => jobs.push(erc20Bal(RPC[chain], token, owner, dec).then(v => { spot[key] += v; })));
+    }
+
+    // Aave: colateral por ativo, dívida e limite de liquidação reais de cada carteira × rede
+    const chainOrder = Object.keys(AAVE);
+    const positions = [];
+    Object.entries(WALLETS).forEach(([wallet, owner], wi) => {
+      chainOrder.forEach((chain, ci) => {
+        const cfg = AAVE[chain];
+        jobs.push((async () => {
+          const acct = decodeAave(await ethCall(cfg.rpc, cfg.pool, '0xbf92857c' + pad(owner.slice(2).toLowerCase())));
+          if (acct.collateralUSD === 0 && acct.debtUSD === 0) return;
+          const sum = async (list, dec) => (await Promise.all(list.map(a => erc20Bal(cfg.rpc, a, owner, dec)))).reduce((s, v) => s + v, 0);
+          const [btc, eth, usdc] = await Promise.all([sum(cfg.a.btc, 8), sum(cfg.a.eth, 18), sum(cfg.a.usdc, 6)]);
+          // "other" = colateral que o Aave enxerga além dos 3 ativos acima (e pequena diferença de oráculo) — mantido constante
+          const other = acct.collateralUSD - (btc * px.btc + eth * px.eth + usdc);
+          positions.push({ order: wi * 10 + ci, wallet, chain, btc, eth, usdc, other, borrowed: acct.debtUSD, threshold: acct.threshold });
+        })());
+      });
+    });
+
+    const [, pools] = await Promise.all([Promise.all(jobs), scanPools(px)]);
+    positions.sort((a, b) => a.order - b.order);
+
+    state.base = { btc: px.btc, eth: px.eth, fx };
+    state.btcQty = spot.btc + positions.reduce((s, p) => s + p.btc, 0);
+    state.ethQty = spot.eth + positions.reduce((s, p) => s + p.eth, 0);
+    state.usdcAsset = spot.usdc + positions.reduce((s, p) => s + p.usdc, 0);
+    state.usdcDebt = positions.reduce((s, p) => s + p.borrowed, 0);
+    state.otherUsd = spot.pol * px.pol + spot.sol * px.sol + spot.uni * px.uni + spot.hype * px.hype + DUST_USD + positions.reduce((s, p) => s + p.other, 0);
+    state.positions = positions;
+    state.pools = pools;
+    state.live = true;
+  }
+
+  function applyLive() {
+    buildPositionsTable();
+    // sliders no preço atual (garante que o valor cabe na faixa) e atalhos de câmbio ao redor da cotação
+    btcRange.min = Math.min(15000, Math.floor(state.base.btc / 3)); btcRange.max = Math.max(220000, Math.ceil(state.base.btc * 3));
+    ethRange.min = Math.min(400, Math.floor(state.base.eth / 3)); ethRange.max = Math.max(10000, Math.ceil(state.base.eth * 3));
+    const fxc = Math.round(state.base.fx * 100);
+    document.querySelectorAll('#fxChips .chip[data-set]').forEach((chip, i) => {
+      const v = fxc + [-40, 0, 40, 80][i];
+      chip.dataset.set = v; chip.textContent = (v / 100).toFixed(2).replace('.', ',');
+    });
+    bindFxChips();
+    resetSliders();
+    document.getElementById('snapshotNote').textContent = 'Posição on-chain lida em ' + new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) + ' · preços CoinGecko · dólar comercial';
+    document.getElementById('otherLede').textContent = fmtUSD2(state.otherUsd);
+    document.getElementById('simFooter').textContent = 'Modelo aproximado: quantidades, dívida e limite de liquidação de cada posição do Aave (getUserAccountData) foram lidos on-chain agora; o limite fica fixo no cenário e a dívida em USDC não é recalculada por juros. Pools da Uniswap V3 de pares BTC/ETH contra stablecoin são reavaliadas pela matemática de liquidez concentrada (incluindo impermanent loss); outros pares ficam no valor atual. SOL, POL, UNI, HYPE e resíduos ficam constantes. Use como referência de cenário, não como garantia de comportamento real do protocolo.';
+    render();
+  }
+
+  loadLive().then(applyLive).catch(() => {
+    // Dentro do Artifact do claude.ai a consulta é bloqueada — segue com o snapshot. Hospedado, avisa que não deu pra ler.
+    if (!ON_CLAUDE) document.getElementById('snapshotNote').textContent = 'Snapshot de 22/08/2026 — não consegui ler a blockchain agora, recarregue a página';
+  });
 </script>
