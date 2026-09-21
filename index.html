@@ -605,45 +605,45 @@
         <tbody>
           <tr>
             <td class="asset"><span class="asset-dot" style="background:#e79a3d"></span>BTC (cbBTC + WBTC, spot + Aave)</td>
-            <td class="num">0,5879</td>
-            <td class="num">0,0495</td>
-            <td class="num" style="font-weight:600">0,6374</td>
-            <td class="num" style="font-weight:600">US$ 49.113</td>
+            <td class="num" id="rbtc1">0,5879</td>
+            <td class="num" id="rbtc2">0,0495</td>
+            <td class="num" style="font-weight:600" id="rbtcT">0,6374</td>
+            <td class="num" style="font-weight:600" id="rbtcUSD">US$ 49.113</td>
           </tr>
           <tr>
             <td class="asset"><span class="asset-dot" style="background:#8a92b2"></span>ETH (ETH + WETH, spot + Aave)</td>
-            <td class="num">4,1038</td>
-            <td class="num">0,4364</td>
-            <td class="num" style="font-weight:600">4,5402</td>
-            <td class="num" style="font-weight:600">US$ 10.966</td>
+            <td class="num" id="reth1">4,1038</td>
+            <td class="num" id="reth2">0,4364</td>
+            <td class="num" style="font-weight:600" id="rethT">4,5402</td>
+            <td class="num" style="font-weight:600" id="rethUSD">US$ 10.966</td>
           </tr>
           <tr>
             <td class="asset"><span class="asset-dot" style="background:#4ea67a"></span>HYPE</td>
-            <td class="num">—</td>
-            <td class="num">3,1882</td>
-            <td class="num" style="font-weight:600">3,1882</td>
-            <td class="num" style="font-weight:600">US$ 252,10</td>
+            <td class="num" id="rhype1">—</td>
+            <td class="num" id="rhype2">3,1882</td>
+            <td class="num" style="font-weight:600" id="rhypeT">3,1882</td>
+            <td class="num" style="font-weight:600" id="rhypeUSD">US$ 252,10</td>
           </tr>
           <tr>
             <td class="asset"><span class="asset-dot" style="background:#8a63d2"></span>SOL (Wormhole)</td>
-            <td class="num">1,7904</td>
-            <td class="num">—</td>
-            <td class="num" style="font-weight:600">1,7904</td>
-            <td class="num" style="font-weight:600">US$ 167,03</td>
+            <td class="num" id="rsol1">1,7904</td>
+            <td class="num" id="rsol2">—</td>
+            <td class="num" style="font-weight:600" id="rsolT">1,7904</td>
+            <td class="num" style="font-weight:600" id="rsolUSD">US$ 167,03</td>
           </tr>
           <tr>
             <td class="asset"><span class="asset-dot" style="background:#8a63d2"></span>POL</td>
-            <td class="num">689,9944</td>
-            <td class="num">50,0000</td>
-            <td class="num" style="font-weight:600">739,9944</td>
-            <td class="num" style="font-weight:600">US$ 77,06</td>
+            <td class="num" id="rpol1">689,9944</td>
+            <td class="num" id="rpol2">50,0000</td>
+            <td class="num" style="font-weight:600" id="rpolT">739,9944</td>
+            <td class="num" style="font-weight:600" id="rpolUSD">US$ 77,06</td>
           </tr>
           <tr>
             <td class="asset"><span class="asset-dot" style="background:#ec5f8a"></span>UNI</td>
-            <td class="num">8,9983</td>
-            <td class="num">—</td>
-            <td class="num" style="font-weight:600">8,9983</td>
-            <td class="num" style="font-weight:600">US$ 38,64</td>
+            <td class="num" id="runi1">8,9983</td>
+            <td class="num" id="runi2">—</td>
+            <td class="num" style="font-weight:600" id="runiT">8,9983</td>
+            <td class="num" style="font-weight:600" id="runiUSD">US$ 38,64</td>
           </tr>
           <tr>
             <td class="asset muted">USDC em carteira / Aave / rewards</td>
@@ -661,10 +661,10 @@
           </tr>
           <tr>
             <td class="asset" style="color:var(--bad)"><span class="asset-dot" style="background:var(--bad)"></span>USDC emprestado (passivo Aave)</td>
-            <td class="num" style="color:var(--bad)">− 12.134,99</td>
-            <td class="num" style="color:var(--bad)">− 1.369,83</td>
-            <td class="num" style="font-weight:600; color:var(--bad)">− 13.504,82</td>
-            <td class="num" style="font-weight:600; color:var(--bad)">− US$ 13.504,82</td>
+            <td class="num" style="color:var(--bad)" id="debtC1">− 12.134,99</td>
+            <td class="num" style="color:var(--bad)" id="debtC2">− 1.369,83</td>
+            <td class="num" style="font-weight:600; color:var(--bad)" id="debtCT">− 13.504,82</td>
+            <td class="num" style="font-weight:600; color:var(--bad)" id="debtCUSD">− US$ 13.504,82</td>
           </tr>
           <tr class="total">
             <td colspan="4">Patrimônio líquido total</td>
@@ -847,7 +847,9 @@
 
     let supTotal = 0, debtTotal = 0;
     const walletNet = { 'Carteira 1': 0, 'Carteira 2': 0 };
+    const walletDebt = { 'Carteira 1': 0, 'Carteira 2': 0 };
     results.forEach(r => {
+      walletDebt[r.wallet] += r.debtUSD;
       document.getElementById('hf' + r.idx).textContent = r.healthFactor === Infinity ? '∞' : r.healthFactor.toFixed(2).replace('.', ',');
       document.getElementById('hf' + r.idx).className = 'hf-pill ' + hfClass(r.healthFactor);
       document.getElementById('sup' + r.idx).textContent = fmtUSD2(r.collateralUSD);
@@ -860,6 +862,13 @@
     document.getElementById('supTotal').textContent = fmtUSD2(supTotal);
     document.getElementById('debtTotal').textContent = fmtUSD2(debtTotal);
     document.getElementById('netTotal').textContent = fmtUSD0(supTotal - debtTotal);
+
+    // Passivo em USDC na tabela de exposição (a dívida do Aave é toda em USDC, então US$ ≈ quantidade).
+    const fmtDebt = (n) => '− ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('debtC1').textContent = fmtDebt(walletDebt['Carteira 1']);
+    document.getElementById('debtC2').textContent = fmtDebt(walletDebt['Carteira 2']);
+    document.getElementById('debtCT').textContent = fmtDebt(debtTotal);
+    document.getElementById('debtCUSD').textContent = '− ' + fmtUSD2(debtTotal);
 
     // USDC fornecido no Aave por carteira (aToken em cada rede) — só composição/exibição, já está
     // embutido no total de "Fornecido" acima (getUserAccountData soma todos os ativos), não some de novo.
@@ -1005,6 +1014,22 @@
 
     spotLive['Carteira 1'] = w1CbbtcQty * btcPrice + w1EthQty * ethPrice + w1WethQty * ethPrice + w1PolQty * polPrice + w1UniQty * uniPrice + w1SolQty * solPrice + w1UsdcQty;
     spotLive['Carteira 2'] = w2WbtcQty * btcPrice + w2WethQty * ethPrice + w2EthQty * ethPrice + w2PolQty * polPrice + w2HypeQty * hypePrice + w2UsdcQty;
+    // Tabela "Exposição consolidada por ativo": mesmas quantidades ao vivo das tabelas de saldo acima
+    // (BTC/ETH somam carteira + Aave; antes essas linhas ficavam presas no snapshot).
+    const fmtQ = (n) => n > 0 ? n.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 }) : '—';
+    function setRollupRow(id, q1, q2, price) {
+      document.getElementById('r' + id + '1').textContent = fmtQ(q1);
+      document.getElementById('r' + id + '2').textContent = fmtQ(q2);
+      document.getElementById('r' + id + 'T').textContent = fmtQ(q1 + q2);
+      document.getElementById('r' + id + 'USD').textContent = fmtUSD2((q1 + q2) * price);
+    }
+    setRollupRow('btc', w1BtcTotalQty, w2BtcTotalQty, btcPrice);
+    setRollupRow('eth', w1EthTotalQty, w2EthTotalQty, ethPrice);
+    setRollupRow('hype', 0, w2HypeQty, hypePrice);
+    setRollupRow('sol', w1SolQty, 0, solPrice);
+    setRollupRow('pol', w1PolQty, w2PolQty, polPrice);
+    setRollupRow('uni', w1UniQty, 0, uniPrice);
+
     usdcSpot = { 'Carteira 1': w1UsdcQty, 'Carteira 2': w2UsdcQty };
     updateUsdcRow();
     document.getElementById('w1usdcQty').textContent = w1UsdcQty > 0 ? w1UsdcQty.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
