@@ -610,13 +610,28 @@
     return pools;
   }
 
+  // Câmbio: dólar comercial (AwesomeAPI); se falhar, taxa de mercado do open.er-api; se falhar, mantém o câmbio do snapshot.
+  async function fetchFx() {
+    try {
+      const j = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL').then(r => r.json());
+      const v = parseFloat(j.USDBRL.bid);
+      if (v > 0) return { rate: v, source: 'dólar comercial' };
+    } catch (e) { /* tenta a fonte reserva */ }
+    try {
+      const j = await fetch('https://open.er-api.com/v6/latest/USD').then(r => r.json());
+      if (j.rates && j.rates.BRL > 0) return { rate: j.rates.BRL, source: 'câmbio de mercado (fonte reserva)' };
+    } catch (e) { /* mantém snapshot */ }
+    return { rate: state.base.fx, source: 'câmbio do snapshot (não consegui atualizar)' };
+  }
+
   async function loadLive() {
-    const [pj, fxj] = await Promise.all([
+    const [pj, fxInfo] = await Promise.all([
       fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,polygon-ecosystem-token,solana,uniswap,hyperliquid&vs_currencies=usd').then(r => r.json()),
-      fetch('https://economia.awesomeapi.com.br/last/USD-BRL').then(r => r.json()),
+      fetchFx(),
     ]);
     const px = { btc: pj.bitcoin.usd, eth: pj.ethereum.usd, pol: pj['polygon-ecosystem-token'].usd, sol: pj.solana.usd, uni: pj.uniswap.usd, hype: pj.hyperliquid.usd };
-    const fx = parseFloat(fxj.USDBRL.bid);
+    const fx = fxInfo.rate;
+    state.fxSource = fxInfo.source;
     if (!(px.btc > 0 && px.eth > 0 && fx > 0)) throw new Error('cotações inválidas');
 
     // Saldo em carteira (soma das duas carteiras)
@@ -671,7 +686,7 @@
     });
     bindFxChips();
     resetSliders();
-    document.getElementById('snapshotNote').textContent = 'Posição on-chain lida em ' + new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) + ' · preços CoinGecko · dólar comercial';
+    document.getElementById('snapshotNote').textContent = 'Posição on-chain lida em ' + new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) + ' · preços CoinGecko · ' + state.fxSource;
     document.getElementById('otherLede').textContent = fmtUSD2(state.otherUsd);
     document.getElementById('simFooter').textContent = 'Modelo aproximado: quantidades, dívida e limite de liquidação de cada posição do Aave (getUserAccountData) foram lidos on-chain agora; o limite fica fixo no cenário e a dívida em USDC não é recalculada por juros. Pools da Uniswap V3 de pares BTC/ETH contra stablecoin são reavaliadas pela matemática de liquidez concentrada (incluindo impermanent loss); outros pares ficam no valor atual. SOL, POL, UNI, HYPE e resíduos ficam constantes. Use como referência de cenário, não como garantia de comportamento real do protocolo.';
     render();
