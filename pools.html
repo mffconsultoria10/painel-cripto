@@ -195,26 +195,28 @@
 
   <div class="form-card" id="formCard">
     <h3 id="formTitle">Nova pool</h3>
+    <p class="lede" id="formHint" style="display:none; margin:-6px 0 0;">Os demais dados (par, faixa, valor atual, taxas...) continuam vindo direto da blockchain. Isto só ajusta o custo de entrada que você realmente pagou, para o cálculo de impermanent loss e rentabilidade ficar exato.</p>
     <div class="form-grid">
-      <div class="field"><label>Ativo A</label><input id="f_tokenA" placeholder="ETH"></div>
-      <div class="field"><label>Ativo B</label><input id="f_tokenB" placeholder="USDC"></div>
-      <div class="field"><label>Rede</label><input id="f_rede" placeholder="Base"></div>
-      <div class="field"><label>Carteira</label>
+      <div class="field" data-manual-only><label>Ativo A</label><input id="f_tokenA" placeholder="ETH"></div>
+      <div class="field" data-manual-only><label>Ativo B</label><input id="f_tokenB" placeholder="USDC"></div>
+      <div class="field" data-manual-only><label>Rede</label><input id="f_rede" placeholder="Base"></div>
+      <div class="field" data-manual-only><label>Carteira</label>
         <select id="f_carteira"><option>Carteira 1</option><option>Carteira 2</option><option>Outra</option></select>
       </div>
       <div class="field"><label>Data de abertura</label><input id="f_data" type="date"></div>
-      <div class="field"><label>Faixa mínima (B por A)</label><input id="f_min" type="text" inputmode="decimal" placeholder="2200"></div>
-      <div class="field"><label>Faixa máxima (B por A)</label><input id="f_max" type="text" inputmode="decimal" placeholder="2800"></div>
+      <div class="field" data-manual-only><label>Faixa mínima (B por A)</label><input id="f_min" type="text" inputmode="decimal" placeholder="2200"></div>
+      <div class="field" data-manual-only><label>Faixa máxima (B por A)</label><input id="f_max" type="text" inputmode="decimal" placeholder="2800"></div>
       <div class="field"><label>Preço de entrada</label><input id="f_entrada" type="text" inputmode="decimal" placeholder="2415"></div>
-      <div class="field"><label>Preço atual</label><input id="f_atual" type="text" inputmode="decimal" placeholder="2415"></div>
+      <div class="field" data-manual-only><label>Preço atual</label><input id="f_atual" type="text" inputmode="decimal" placeholder="2415"></div>
       <div class="field"><label>Valor investido (US$)</label><input id="f_investido" type="text" inputmode="decimal" placeholder="5000"></div>
-      <div class="field"><label>Valor de A hoje (US$)</label><input id="f_valorA" type="text" inputmode="decimal" placeholder="2500"></div>
-      <div class="field"><label>Valor de B hoje (US$)</label><input id="f_valorB" type="text" inputmode="decimal" placeholder="2500"></div>
-      <div class="field"><label>Taxas coletadas (US$)</label><input id="f_taxas" type="text" inputmode="decimal" placeholder="0"></div>
+      <div class="field" data-manual-only><label>Valor de A hoje (US$)</label><input id="f_valorA" type="text" inputmode="decimal" placeholder="2500"></div>
+      <div class="field" data-manual-only><label>Valor de B hoje (US$)</label><input id="f_valorB" type="text" inputmode="decimal" placeholder="2500"></div>
+      <div class="field" data-manual-only><label>Taxas coletadas (US$)</label><input id="f_taxas" type="text" inputmode="decimal" placeholder="0"></div>
     </div>
     <div class="form-actions">
+      <button class="btn ghost" id="clearOverrideBtn" style="display:none; margin-right:auto;" onclick="clearOverride()">Voltar ao valor automático</button>
       <button class="btn ghost" onclick="closeForm()">Cancelar</button>
-      <button class="btn primary" onclick="savePool()">Salvar pool</button>
+      <button class="btn primary" onclick="savePool()">Salvar</button>
     </div>
   </div>
 
@@ -225,7 +227,7 @@
   </div>
 
   <footer>
-    Posições marcadas "detectada on-chain" vêm direto do contrato NonfungiblePositionManager da Uniswap V3 (Arbitrum, Base e outras redes) para as carteiras 1 e 2, lidas sob pedido — a página em si não faz essa consulta sozinha ao carregar, por restrição de segurança do navegador. Data de criação e valor investido vêm do evento de depósito inicial da posição (IncreaseLiquidity) buscado retroativamente na blockchain (até ~15 janelas de 10 mil blocos, o que cobre alguns dias de histórico nos nós públicos gratuitos); posições mais antigas que isso ficam com valor investido zerado até você completar manualmente. O preço de cada ativo na data de criação vem do histórico diário da CoinGecko. Taxas acumuladas são recalculadas ao vivo via feeGrowthInside (a mesma conta que o contrato faz dentro de collect()), não o valor desatualizado gravado na última interação com a posição. Pool APR = taxas acumuladas ÷ valor investido, anualizado pelo tempo real decorrido desde a criação — mede só o rendimento de taxas desta posição, sem contar IL nem variação de preço; como é calculado a partir do que essa posição específica já acumulou, pode oscilar bastante nas primeiras horas/dias (e não é diretamente comparável ao "Pool APR" agregado que sites como o revert.finance mostram, que usa o volume histórico da pool inteira). Impermanent loss estimado pela fórmula padrão (2·√k / (1+k) − 1, onde k é a razão entre o preço atual e o preço de entrada), aplicado sobre o valor investido — uma aproximação, não o valor exato do protocolo. Retorno total = (valor atual + taxas acumuladas − valor investido) / valor investido, já incluindo IL; média diária é esse retorno dividido pelos dias ativos (média simples, não composta). Pools adicionadas manualmente ficam salvas apenas no armazenamento local deste navegador.
+    Posições marcadas "detectada on-chain" vêm direto do contrato NonfungiblePositionManager da Uniswap V3 (Arbitrum, Base e outras redes) para as carteiras 1 e 2, lidas sob pedido — a página em si não faz essa consulta sozinha ao carregar, por restrição de segurança do navegador. Data de criação e valor investido vêm do evento de depósito inicial da posição (IncreaseLiquidity) buscado retroativamente na blockchain (até ~15 janelas de 10 mil blocos, o que cobre alguns dias de histórico nos nós públicos gratuitos); posições mais antigas que isso ficam com valor investido zerado até você completar manualmente. O preço de cada ativo na data de criação vem do histórico diário da CoinGecko. Em qualquer pool detectada on-chain, o lápis deixa você informar seu próprio valor investido, preço de entrada e data — esse valor manual passa a valer para o cálculo de IL, Pool APR e rentabilidade dessa posição, mesmo depois de "Atualizar pools" de novo, e fica salvo neste navegador (não na blockchain); "Voltar ao valor automático" descarta o ajuste. Taxas acumuladas são recalculadas ao vivo via feeGrowthInside (a mesma conta que o contrato faz dentro de collect()), não o valor desatualizado gravado na última interação com a posição. Pool APR = taxas acumuladas ÷ valor investido, anualizado pelo tempo real decorrido desde a criação — mede só o rendimento de taxas desta posição, sem contar IL nem variação de preço; como é calculado a partir do que essa posição específica já acumulou, pode oscilar bastante nas primeiras horas/dias (e não é diretamente comparável ao "Pool APR" agregado que sites como o revert.finance mostram, que usa o volume histórico da pool inteira). Impermanent loss estimado pela fórmula padrão (2·√k / (1+k) − 1, onde k é a razão entre o preço atual e o preço de entrada), aplicado sobre o valor investido — uma aproximação, não o valor exato do protocolo. Retorno total = (valor atual + taxas acumuladas − valor investido) / valor investido, já incluindo IL; média diária é esse retorno dividido pelos dias ativos (média simples, não composta). Pools adicionadas manualmente ficam salvas apenas no armazenamento local deste navegador.
   </footer>
 
 </div>
@@ -239,8 +241,15 @@
   let AUTO_POOLS = [];
 
   let manualPools = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+
+  // Valor investido / preço de entrada / data digitados à mão para uma pool DETECTADA on-chain —
+  // guardado à parte (por id da posição), nunca cria uma cópia da pool. Vence o valor lido on-chain.
+  const OVERRIDE_KEY = 'painel-cripto-lp-overrides-v1';
+  let overrides = JSON.parse(localStorage.getItem(OVERRIDE_KEY) || '{}');
+
   let pools = [...AUTO_POOLS.map(p => ({ ...p, auto: true })), ...manualPools];
   let editingId = null;
+  let editingIsAuto = false;
 
   function fmtUSD(n) { const s = n < 0 ? '-' : ''; return s + 'US$ ' + Math.abs(Math.round(n)).toLocaleString('pt-BR'); }
   function fmtPct(n) { return (n >= 0 ? '+' : '') + n.toFixed(2).replace('.', ',') + '%'; }
@@ -274,7 +283,11 @@
 
   function openForm(pool) {
     editingId = pool ? pool.id : null;
-    document.getElementById('formTitle').textContent = pool ? (pool.auto ? 'Completar dados da pool detectada' : 'Editar pool') : 'Nova pool';
+    editingIsAuto = !!(pool && pool.auto);
+    document.getElementById('formTitle').textContent = pool ? (editingIsAuto ? `Valor investido — ${pool.tokenA} / ${pool.tokenB}` : 'Editar pool') : 'Nova pool';
+    document.getElementById('formHint').style.display = editingIsAuto ? 'block' : 'none';
+    document.querySelectorAll('[data-manual-only]').forEach(el => el.style.display = editingIsAuto ? 'none' : '');
+    document.getElementById('clearOverrideBtn').style.display = (editingIsAuto && overrides[editingId]) ? '' : 'none';
     const textFields = ['tokenA','tokenB','rede','data'];
     const numFields = ['min','max','entrada','atual','investido','valorA','valorB','taxas'];
     textFields.forEach(f => document.getElementById('f_' + f).value = pool ? (pool[f] ?? '') : '');
@@ -283,9 +296,20 @@
     document.getElementById('formCard').classList.add('open');
     document.getElementById('formCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
-  function closeForm() { document.getElementById('formCard').classList.remove('open'); editingId = null; }
+  function closeForm() { document.getElementById('formCard').classList.remove('open'); editingId = null; editingIsAuto = false; }
 
   function savePool() {
+    if (editingIsAuto) {
+      overrides[editingId] = {
+        investido: num(document.getElementById('f_investido').value),
+        entrada: num(document.getElementById('f_entrada').value),
+        data: document.getElementById('f_data').value,
+      };
+      localStorage.setItem(OVERRIDE_KEY, JSON.stringify(overrides));
+      closeForm();
+      render();
+      return;
+    }
     const pool = {
       id: editingId || (Date.now() + '-' + Math.random().toString(36).slice(2)),
       tokenA: document.getElementById('f_tokenA').value.trim() || 'A',
@@ -307,9 +331,17 @@
       pool.id = editingId;
       manualPools = manualPools.map(p => p.id === editingId ? pool : p);
     } else {
-      manualPools.push(pool); // inclui o caso de "promover" uma pool detectada on-chain para edição manual
+      manualPools.push(pool);
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(manualPools));
+    closeForm();
+    render();
+  }
+
+  function clearOverride() {
+    if (!editingId) return;
+    delete overrides[editingId];
+    localStorage.setItem(OVERRIDE_KEY, JSON.stringify(overrides));
     closeForm();
     render();
   }
@@ -359,7 +391,10 @@
   }
 
   function render() {
-    pools = [...AUTO_POOLS.map(p => ({ ...p, auto: true })), ...manualPools];
+    pools = [...AUTO_POOLS.map(p => {
+      const ov = overrides[p.id];
+      return ov ? { ...p, auto: true, hasOverride: true, investido: ov.investido, entrada: ov.entrada || p.entrada, data: ov.data || p.data } : { ...p, auto: true };
+    }), ...manualPools];
     renderSummary();
     document.getElementById('emptyState').style.display = pools.length === 0 ? 'flex' : 'none';
     document.getElementById('addRow').style.display = pools.length === 0 ? 'none' : 'block';
@@ -375,6 +410,7 @@
             <div class="pool-pair">${p.tokenA} / ${p.tokenB}</div>
             <div class="pool-tags">
               ${p.auto ? '<span class="tag auto">🔗 detectada on-chain</span>' : ''}
+              ${p.hasOverride ? '<span class="tag auto">✏️ investido manual</span>' : ''}
               <span class="tag">${p.rede}</span>
               <span class="tag">${p.carteira}</span>
               ${p.mintDateTime
@@ -425,7 +461,8 @@
             <div class="mini-stat"><div class="k">Média diária</div><div class="v num ${c.rentDiaPct >= 0 ? 'good' : 'bad'}">${fmtPct(c.rentDiaPct)}</div></div>
           </div>
           ${p.auto && p.usdEstimated ? `<div style="font-size:12px;color:var(--text-faint)">Sem cotação USD para ${p.tokenA} ou ${p.tokenB} — valores em termos de ${p.tokenB}.</div>` : ''}
-          ${p.auto && p.investido === 0 ? `<div style="font-size:12px;color:var(--text-faint)">Não encontrei o depósito inicial on-chain (posição muito antiga para o histórico gratuito) — clique no lápis para completar valor investido, preço de entrada e data manualmente.</div>` : ''}
+          ${p.auto && p.investido === 0 ? `<div style="font-size:12px;color:var(--text-faint)">Não encontrei o depósito inicial on-chain (posição muito antiga para o histórico gratuito) — clique no lápis para informar o valor investido manualmente.</div>` : ''}
+          ${p.auto && p.investido > 0 ? `<div style="font-size:12px;color:var(--text-faint)">${p.hasOverride ? 'Valor investido ajustado por você.' : 'Valor investido estimado pelo depósito on-chain.'} Clique no lápis para ${p.hasOverride ? 'mudar' : 'corrigir'}.</div>` : ''}
         </div>
       `;
       list.appendChild(card);
