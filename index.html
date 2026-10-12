@@ -708,15 +708,26 @@
 
   // ---- Câmbio USD/BRL (dólar comercial) ao vivo — o campo continua editável manualmente ----
   async function refreshFx() {
-    const j = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL').then(r => r.json());
-    const rate = parseFloat(j.USDBRL.bid);
-    if (!rate) throw new Error('cotação inválida');
+    let rate = 0, source = '';
+    try {
+      const j = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL').then(r => r.json());
+      rate = parseFloat(j.USDBRL.bid);
+      source = 'dólar comercial ao vivo';
+    } catch (e) { /* tenta a fonte reserva */ }
+    if (!(rate > 0)) {
+      const j = await fetch('https://open.er-api.com/v6/latest/USD').then(r => r.json());
+      rate = j.rates && j.rates.BRL;
+      source = 'câmbio de mercado ao vivo (fonte reserva)';
+    }
+    if (!(rate > 0)) throw new Error('cotação inválida');
     fxInput.value = rate.toFixed(4).replace('.', ',');
-    document.getElementById('fxLiveTag').hidden = false;
+    const tag = document.getElementById('fxLiveTag');
+    tag.textContent = '· ' + source;
+    tag.hidden = false;
     update();
   }
-  refreshFx().catch(() => {
-    // Bloqueado (sandbox do Artifact) ou sem rede — mantém o valor manual do campo.
+  let fxReady = refreshFx().catch(() => {
+    // Bloqueado (sandbox do Artifact) ou sem rede — mantém o valor padrão do campo.
   });
 
   const REQUEST_TEXT = 'Atualiza o painel cripto inteiro';
@@ -732,8 +743,8 @@
   document.getElementById('updateBtn').addEventListener('click', async () => {
     if (liveMode) {
       showToast('Consultando a blockchain...');
-      const results = await Promise.allSettled([refreshAaveLive(), refreshSpotLive()]);
-      showToast(results.some(r => r.status === 'fulfilled') ? 'Atualizado agora mesmo.' : 'Não consegui consultar agora — tente de novo em instantes.');
+      const results = await refreshAll({ fx: true });
+      showToast(results.slice(0, 3).some(r => r.status === 'fulfilled') ? 'Atualizado agora mesmo — o simulador usa estes mesmos números.' : 'Não consegui consultar agora — tente de novo em instantes.');
       return;
     }
     document.getElementById('copyFallback').hidden = true;
@@ -772,6 +783,13 @@
   };
   // Poeira sem valor relevante para mapear (MON, WGC, MM.Finance) — fica no valor do snapshot.
   const SPOT_STATIC = { 'Carteira 1': 29.61, 'Carteira 2': 0.03 };
+  const MERKL_REWARD = { 'Carteira 1': 0, 'Carteira 2': 1.73 }; // recompensa parada, sem fonte on-chain simples
+
+  // ---- Estado compartilhado com o simulador ----
+  // O painel é a única fonte dos números: a cada ciclo de leitura ele grava aqui o estado consolidado
+  // (mesma origem → localStorage) e o simulador só lê isso, então os dois nunca divergem.
+  const SNAP_KEY = 'painel-cripto-estado-v1';
+  const snap = { px: null, spot: null, aave: null, pools: null };
   // Parte do saldo em carteira coberta pela leitura ao vivo (cbBTC/WBTC, ETH/WETH, POL, SOL, UNI, HYPE) — começa com o valor do snapshot e é atualizada por refreshSpotLive().
   let spotLive = { 'Carteira 1': 16844 - 29.61, 'Carteira 2': 1284 - 0.03 };
   let aaveNet = { 'Carteira 1': 14669 + 11866, 'Carteira 2': 1700 + 1072 };
@@ -845,9 +863,44 @@
       results.push({ ...row, ...decodeAave(r) });
     }
 
+    // Composição por ativo (aTokens) de cada posição, para o simulador — varre também as combinações
+    // carteira × rede que não têm linha na tabela, para nenhuma posição nova ficar de fora do total.
+    const composed = [];
+    const extras = [];
+    for (const wallet of Object.keys(AAVE_WALLETS)) {
+      for (const chain of Object.keys(AAVE_CHAINS)) {
+        const owner = AAVE_WALLETS[wallet], cfg = AAVE_CHAINS[chain];
+        const known = results.find(r => r.wallet === wallet && r.chain === chain);
+        const acct = known || { wallet, chain, ...decodeAave(await ethCall(cfg.rpc, cfg.pool, selector + padHex(owner.slice(2).toLowerCase()))) };
+        if (acct.collateralUSD === 0 && acct.debtUSD === 0) continue;
+        const a = A_BY_CHAIN[chain];
+        const [btc, eth, usdc] = await Promise.all([
+          erc20Bal(cfg.rpc, a.btc, owner, 8), erc20Bal(cfg.rpc, a.eth, owner, 18), erc20Bal(cfg.rpc, a.usdc, owner, 6),
+        ]);
+        composed.push({ wallet, chain, btc, eth, usdc, collateralUSD: acct.collateralUSD, borrowed: acct.debtUSD, threshold: acct.liqThresholdPct / 100 });
+        if (!known) extras.push(acct);
+      }
+    }
+
     let supTotal = 0, debtTotal = 0;
     const walletNet = { 'Carteira 1': 0, 'Carteira 2': 0 };
     const walletDebt = { 'Carteira 1': 0, 'Carteira 2': 0 };
+    extras.forEach(r => {
+      walletDebt[r.wallet] += r.debtUSD;
+      supTotal += r.collateralUSD; debtTotal += r.debtUSD;
+      walletNet[r.wallet] += r.collateralUSD - r.debtUSD;
+    });
+    let extraNote = document.getElementById('aaveExtraNote');
+    if (!extraNote) {
+      extraNote = document.createElement('div');
+      extraNote.id = 'aaveExtraNote';
+      extraNote.className = 'note-row';
+      document.getElementById('netTotal').closest('.table-scroll').insertAdjacentElement('afterend', extraNote);
+    }
+    extraNote.hidden = extras.length === 0;
+    extraNote.textContent = extras.length
+      ? 'Posição(ões) no Aave fora da tabela, já somadas ao total: ' + extras.map(r => `${r.wallet} · ${r.chain} (US$ ${Math.round(r.collateralUSD - r.debtUSD).toLocaleString('pt-BR')} líquidos)`).join('; ') + '.'
+      : '';
     results.forEach(r => {
       walletDebt[r.wallet] += r.debtUSD;
       document.getElementById('hf' + r.idx).textContent = r.healthFactor === Infinity ? '∞' : r.healthFactor.toFixed(2).replace('.', ',');
@@ -872,27 +925,12 @@
 
     // USDC fornecido no Aave por carteira (aToken em cada rede) — só composição/exibição, já está
     // embutido no total de "Fornecido" acima (getUserAccountData soma todos os ativos), não some de novo.
-    const AUSDC = {
-      Arbitrum: '0x625E7708f30cA75bfd92586e17077590C60eb4cD',
-      Polygon: '0x625E7708f30cA75bfd92586e17077590C60eb4cD',
-      Base: '0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB',
-    };
-    const MERKL_REWARD = { 'Carteira 1': 0, 'Carteira 2': 1.73 }; // recompensa parada, sem fonte on-chain simples
-    try {
-      const byWallet = { 'Carteira 1': 0, 'Carteira 2': 0 };
-      for (const [chainName, aTok] of Object.entries(AUSDC)) {
-        const cfg = AAVE_CHAINS[chainName];
-        for (const [walletId, owner] of Object.entries(AAVE_WALLETS)) {
-          const bal = await ethCall(cfg.rpc, aTok, '0x70a08231' + padHex(owner.slice(2).toLowerCase()));
-          byWallet[walletId] += Number(BigInt(bal)) / 1e6;
-        }
-      }
-      byWallet['Carteira 1'] += MERKL_REWARD['Carteira 1'];
-      byWallet['Carteira 2'] += MERKL_REWARD['Carteira 2'];
-      usdcAaveMerkl = byWallet;
-      updateUsdcRow();
-    } catch (e) { /* mantém o valor do snapshot nessa linha */ }
+    const usdcByWallet = { 'Carteira 1': MERKL_REWARD['Carteira 1'], 'Carteira 2': MERKL_REWARD['Carteira 2'] };
+    composed.forEach(p => { usdcByWallet[p.wallet] += p.usdc; });
+    usdcAaveMerkl = usdcByWallet;
+    updateUsdcRow();
 
+    snap.aave = { positions: composed };
     aaveNet = walletNet;
     recomputeTotals();
     document.getElementById('aaveLiveBadge').hidden = false;
@@ -936,6 +974,13 @@
     polyArbWETH: '0xe50fA9b3c56FfB159cB0FCA61F5c9D750e8128c8', // aPolWETH / aArbWETH
     baseWETH: '0xd4a0e0B9149BCee3C920d2E00b5dE09138Fd8bb7',    // aBasWETH
     baseCbBTC: '0xBdb9300b7CDE636d9cD4AFF00f6F009fFBBc8EE6',   // aBascbBTC
+  };
+  // aTokens de BTC / ETH / USDC por rede — composição do colateral de cada posição.
+  const A_USDC_POLY_ARB = '0x625E7708f30cA75bfd92586e17077590C60eb4cD';
+  const A_BY_CHAIN = {
+    Polygon:  { btc: A_TOKENS.polyArbWBTC, eth: A_TOKENS.polyArbWETH, usdc: A_USDC_POLY_ARB },
+    Arbitrum: { btc: A_TOKENS.polyArbWBTC, eth: A_TOKENS.polyArbWETH, usdc: A_USDC_POLY_ARB },
+    Base:     { btc: A_TOKENS.baseCbBTC,   eth: A_TOKENS.baseWETH,    usdc: '0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB' },
   };
 
   function setSpotCell(prefix, qty, price) {
@@ -1012,6 +1057,13 @@
     setSpotCell('w2pol', w2PolQty, polPrice);
     setSpotCell('w2hype', w2HypeQty, hypePrice);
 
+    snap.px = { btc: btcPrice, eth: ethPrice, pol: polPrice, sol: solPrice, uni: uniPrice, hype: hypePrice };
+    snap.spot = {
+      btc: w1CbbtcQty + w2WbtcQty,
+      eth: w1EthQty + w1WethQty + w2EthQty + w2WethQty,
+      usdc: w1UsdcQty + w2UsdcQty,
+      pol: w1PolQty + w2PolQty, sol: w1SolQty, uni: w1UniQty, hype: w2HypeQty,
+    };
     spotLive['Carteira 1'] = w1CbbtcQty * btcPrice + w1EthQty * ethPrice + w1WethQty * ethPrice + w1PolQty * polPrice + w1UniQty * uniPrice + w1SolQty * solPrice + w1UsdcQty;
     spotLive['Carteira 2'] = w2WbtcQty * btcPrice + w2WethQty * ethPrice + w2EthQty * ethPrice + w2PolQty * polPrice + w2HypeQty * hypePrice + w2UsdcQty;
     // Tabela "Exposição consolidada por ativo": mesmas quantidades ao vivo das tabelas de saldo acima
@@ -1120,6 +1172,11 @@
     const priceData = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd').then(r => r.json());
     const priceMap = { WBTC: priceData.bitcoin.usd, cbBTC: priceData.bitcoin.usd, BTC: priceData.bitcoin.usd, WETH: priceData.ethereum.usd, ETH: priceData.ethereum.usd, USDC: 1, USDT: 1, DAI: 1, USDbC: 1 };
 
+    // Pools de BTC/ETH contra stablecoin podem ser reavaliadas pelo simulador (liquidez concentrada + IL).
+    const FAMILY = { WBTC: 'btc', cbBTC: 'btc', BTC: 'btc', WETH: 'eth', ETH: 'eth' };
+    const STABLE = new Set(['USDC', 'USDT', 'DAI', 'USDbC']);
+    const poolList = [];
+
     for (const [walletId, owner] of Object.entries(AAVE_WALLETS)) {
       let walletUSD = 0;
       for (const [chainName, cfg] of Object.entries(UNI_CHAINS)) {
@@ -1171,11 +1228,17 @@
           else { raw0 = L * (1 / sqrtC - 1 / sqrtU); raw1 = L * (sqrtC - sqrtL); }
           const amount0 = raw0 / Math.pow(10, dec0), amount1 = raw1 / Math.pow(10, dec1);
           const price0 = priceMap[symbol0], price1 = priceMap[symbol1];
-          if (price0 != null && price1 != null) walletUSD += amount0 * price0 + amount1 * price1;
+          const staticUsd = (price0 != null && price1 != null) ? amount0 * price0 + amount1 * price1 : 0;
+          walletUSD += staticUsd;
+          const pool = { wallet: walletId, chain: chainName, sym0: symbol0, sym1: symbol1, L, tickLower: pos.tickLower, tickUpper: pos.tickUpper, dec0, dec1, mode: 'static', staticUsd };
+          if (FAMILY[symbol0] && STABLE.has(symbol1)) Object.assign(pool, { mode: 'dynamic', volIs0: true, family: FAMILY[symbol0] });
+          else if (FAMILY[symbol1] && STABLE.has(symbol0)) Object.assign(pool, { mode: 'dynamic', volIs0: false, family: FAMILY[symbol1] });
+          poolList.push(pool);
         }
       }
       poolsLive[walletId] = walletUSD;
     }
+    snap.pools = poolList;
 
     const p1 = poolsLive['Carteira 1'], p2 = poolsLive['Carteira 2'];
     if (p1 + p2 > 0) {
@@ -1188,6 +1251,46 @@
     recomputeTotals();
   }
 
-  Promise.allSettled([refreshAaveLive(), refreshSpotLive(), refreshPoolsLive()]);
+  // Grava o estado consolidado que o simulador lê. Só publica quando Aave + preços/saldos vieram juntos
+  // no mesmo ciclo — senão o simulador receberia um retrato misto. A diferença entre o total do painel
+  // e a soma dos componentes (poeira, diferença de oráculo do Aave, Merkl) vai em "outros" para o total
+  // simulado ser exatamente o total do painel.
+  function publishSnapshot() {
+    try {
+      if (!snap.px || !snap.spot || !snap.aave) return false;
+      const px = snap.px;
+      const positions = snap.aave.positions.map(p => ({
+        wallet: p.wallet, chain: p.chain, btc: p.btc, eth: p.eth, usdc: p.usdc,
+        other: p.collateralUSD - (p.btc * px.btc + p.eth * px.eth + p.usdc),
+        borrowed: p.borrowed, threshold: p.threshold,
+      }));
+      const pools = snap.pools || [];
+      const sum = (arr, k) => arr.reduce((s, p) => s + p[k], 0);
+      const btcQty = snap.spot.btc + sum(positions, 'btc');
+      const ethQty = snap.spot.eth + sum(positions, 'eth');
+      const usdcAsset = snap.spot.usdc + sum(positions, 'usdc') + MERKL_REWARD['Carteira 1'] + MERKL_REWARD['Carteira 2'];
+      const usdcDebt = sum(positions, 'borrowed');
+      const poolsUsd = sum(pools, 'staticUsd');
+      const otherUsd = totals.combined - (btcQty * px.btc + ethQty * px.eth + usdcAsset - usdcDebt + poolsUsd);
+      const fxTag = document.getElementById('fxLiveTag');
+      localStorage.setItem(SNAP_KEY, JSON.stringify({
+        v: 1, ts: Date.now(), px, fx: parseFx(fxInput.value),
+        fxSource: fxTag.hidden ? 'câmbio padrão (não consegui atualizar)' : fxTag.textContent.replace(/^·\s*/, ''),
+        btcQty, ethQty, usdcAsset, usdcDebt, otherUsd, positions, pools, totalPainel: totals.combined,
+      }));
+      if (window.parent !== window) window.parent.postMessage({ type: 'painel-estado' }, location.origin);
+      return true;
+    } catch (e) { return false; }
+  }
+
+  async function refreshAll(opts) {
+    if (opts && opts.fx) fxReady = refreshFx().catch(() => {});
+    // exige Aave + preços/saldos DESTE ciclo (as pools, se falharem, mantêm o último valor — igual ao total do painel)
+    snap.px = null; snap.spot = null; snap.aave = null;
+    const results = await Promise.allSettled([refreshAaveLive(), refreshSpotLive(), refreshPoolsLive(), fxReady]);
+    publishSnapshot();
+    return results;
+  }
+  refreshAll();
   // Se todas falharem (sandbox do Artifact ou sem rede), a página mantém o snapshot e o botão de pedir atualização ao Claude.
 </script>
