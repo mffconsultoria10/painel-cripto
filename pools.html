@@ -201,7 +201,7 @@
       <div class="field" data-manual-only><label>Ativo B</label><input id="f_tokenB" placeholder="USDC"></div>
       <div class="field" data-manual-only><label>Rede</label><input id="f_rede" placeholder="Base"></div>
       <div class="field" data-manual-only><label>Carteira</label>
-        <select id="f_carteira"><option>Carteira 1</option><option>Carteira 2</option><option>Outra</option></select>
+        <select id="f_carteira"><option>Carteira 1</option><option>Carteira 2</option><option>Carteira 3</option><option>Outra</option></select>
       </div>
       <div class="field"><label>Data de abertura</label><input id="f_data" type="date"></div>
       <div class="field" data-manual-only><label>Faixa mínima (B por A)</label><input id="f_min" type="text" inputmode="decimal" placeholder="2200"></div>
@@ -560,7 +560,7 @@
     return { fees0, fees1 };
   }
   const COINGECKO_ID = { WBTC: 'bitcoin', cbBTC: 'bitcoin', BTC: 'bitcoin', WETH: 'ethereum', ETH: 'ethereum' };
-  const UNI_WALLETS = { 'Carteira 1': '0x2af9997fc77e50a3cde92b6452ee2faa0ddf2a47', 'Carteira 2': '0x68f0271fd7d9813f951419a1108fc1c9c0ba2072' };
+  const UNI_WALLETS = { 'Carteira 1': '0x2af9997fc77e50a3cde92b6452ee2faa0ddf2a47', 'Carteira 2': '0x68f0271fd7d9813f951419a1108fc1c9c0ba2072', 'Carteira 3': '0x88e8628ac3c8a3011ec215ad6ef8f867c23ede3d' };
 
   function padHexU(h) { return h.padStart(64, '0'); }
   // Cada palavra de retorno ABI tem 32 bytes com extensão de sinal — para números negativos

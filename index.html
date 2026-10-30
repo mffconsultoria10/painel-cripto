@@ -345,7 +345,7 @@
     .eyebrow { font-size: 9px; }
     .section-head h2 { font-size: 13px; }
     .section-head .hint { font-size: 9px; }
-    .wallet-grid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+    .wallet-grid { grid-template-columns: 1fr 1fr 1fr !important; gap: 8px !important; }
     .detail-grid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
     .card, .table-scroll, .detail-panel { box-shadow: none !important; break-inside: avoid; page-break-inside: avoid; }
     .card { padding: 10px 12px; }
@@ -399,10 +399,10 @@
 
   <div class="hero">
     <div class="hero-left">
-      <div class="eyebrow"><span class="dot"></span>Painel consolidado · 2 carteiras · snapshot 22/08/2026</div>
+      <div class="eyebrow"><span class="dot"></span>Painel consolidado · 3 carteiras · snapshot 22/08/2026</div>
       <h1 class="num" id="heroTotal">US$ 47.437</h1>
       <span class="delta-pill down" id="deltaPill">▼ 2,95% nas últimas 24h</span>
-      <div class="hero-sub">Soma de saldo em carteira + posições líquidas em Aave V3 (fornecido − emprestado) das duas carteiras DeBank monitoradas.</div>
+      <div class="hero-sub">Soma de saldo em carteira + posições líquidas em Aave V3 (fornecido − emprestado) das três carteiras monitoradas.</div>
       <div class="live-note" id="liveNote" hidden>🟢 Posições Aave lidas agora mesmo, direto da blockchain — saldo em carteira ainda é do snapshot.</div>
     </div>
     <div class="fx-box">
@@ -462,6 +462,21 @@
         <span class="sw"><span class="chip" style="background:#5b8def"></span>Base 27% · US$ 1.076</span>
         <span class="sw"><span class="chip" style="background:#4ea67a"></span>HyperEVM 6% · US$ 252</span>
         <span class="sw muted">+ Ethereum, Polygon, 9 redes · US$ 102</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="wcard-top">
+        <div>
+          <div class="wcard-name">Carteira 3</div>
+          <div class="wcard-addr">0x88e8…de3d</div>
+        </div>
+        <span class="delta-pill" id="w3DeltaPill" hidden></span>
+      </div>
+      <div class="wcard-total num" id="w3Total">US$ 23</div>
+      <div class="chainbar" id="w3ChainBar"></div>
+      <div class="chain-legend" id="w3ChainLegend">
+        <span class="sw muted">Saldo em carteira por rede, lido on-chain.</span>
       </div>
     </div>
 
@@ -582,6 +597,26 @@
         <div class="note-row">+ Merkl: recompensa de US$ 1,73 em USDC não listada acima.</div>
       </div>
 
+      <div class="detail-panel">
+        <div class="detail-panel-head">
+          <span class="t">Carteira 3 · 0x88e8…de3d</span>
+          <span class="v" id="w3SpotTotal">US$ 23</span>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Ativo</th><th class="num">Qtd.</th><th class="num">Preço</th><th class="num">Valor</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="asset"><span class="asset-dot" style="background:#e79a3d"></span>BTC (cbBTC + WBTC)</td><td class="num" id="w3btcQty">—</td><td class="num muted" id="w3btcPrice">—</td><td class="num" id="w3btcVal">US$ 0</td></tr>
+            <tr><td class="asset"><span class="asset-dot" style="background:#8a92b2"></span>ETH + WETH</td><td class="num" id="w3ethQty">0,0050</td><td class="num muted" id="w3ethPrice">—</td><td class="num" id="w3ethVal">US$ 12</td></tr>
+            <tr><td class="asset"><span class="asset-dot" style="background:#8a63d2"></span>POL</td><td class="num" id="w3polQty">—</td><td class="num muted" id="w3polPrice">—</td><td class="num" id="w3polVal">US$ 0</td></tr>
+            <tr><td class="asset"><span class="asset-dot" style="background:#4ea67a"></span>HYPE</td><td class="num" id="w3hypeQty">—</td><td class="num muted" id="w3hypePrice">—</td><td class="num" id="w3hypeVal">US$ 0</td></tr>
+            <tr><td class="asset"><span class="asset-dot" style="background:#2775CA"></span>USDC</td><td class="num" id="w3usdcQty">11,24</td><td class="num muted">1,00</td><td class="num" id="w3usdcVal">US$ 11,24</td></tr>
+          </tbody>
+        </table>
+        <div class="note-row">Sem posições em Aave nem pools Uniswap V3 detectadas até agora — se surgirem, entram automaticamente.</div>
+      </div>
+
     </div>
   </div>
 
@@ -589,7 +624,7 @@
   <div>
     <div class="section-head">
       <h2>Exposição consolidada por ativo</h2>
-      <span class="hint">Carteira + colateral fornecido no Aave + pools de liquidez, somando as duas carteiras</span>
+      <span class="hint">Carteira + colateral fornecido no Aave + pools de liquidez, somando as três carteiras</span>
     </div>
     <div class="table-scroll" style="margin-top:14px">
       <table>
@@ -598,6 +633,7 @@
             <th>Ativo</th>
             <th class="num">Carteira 1</th>
             <th class="num">Carteira 2</th>
+            <th class="num">Carteira 3</th>
             <th class="num">Total</th>
             <th class="num">Valor USD</th>
           </tr>
@@ -607,6 +643,7 @@
             <td class="asset"><span class="asset-dot" style="background:#e79a3d"></span>BTC (cbBTC + WBTC, spot + Aave)</td>
             <td class="num" id="rbtc1">0,5879</td>
             <td class="num" id="rbtc2">0,0495</td>
+            <td class="num" id="rbtc3">—</td>
             <td class="num" style="font-weight:600" id="rbtcT">0,6374</td>
             <td class="num" style="font-weight:600" id="rbtcUSD">US$ 49.113</td>
           </tr>
@@ -614,6 +651,7 @@
             <td class="asset"><span class="asset-dot" style="background:#8a92b2"></span>ETH (ETH + WETH, spot + Aave)</td>
             <td class="num" id="reth1">4,1038</td>
             <td class="num" id="reth2">0,4364</td>
+            <td class="num" id="reth3">—</td>
             <td class="num" style="font-weight:600" id="rethT">4,5402</td>
             <td class="num" style="font-weight:600" id="rethUSD">US$ 10.966</td>
           </tr>
@@ -621,6 +659,7 @@
             <td class="asset"><span class="asset-dot" style="background:#4ea67a"></span>HYPE</td>
             <td class="num" id="rhype1">—</td>
             <td class="num" id="rhype2">3,1882</td>
+            <td class="num" id="rhype3">—</td>
             <td class="num" style="font-weight:600" id="rhypeT">3,1882</td>
             <td class="num" style="font-weight:600" id="rhypeUSD">US$ 252,10</td>
           </tr>
@@ -628,6 +667,7 @@
             <td class="asset"><span class="asset-dot" style="background:#8a63d2"></span>SOL (Wormhole)</td>
             <td class="num" id="rsol1">1,7904</td>
             <td class="num" id="rsol2">—</td>
+            <td class="num" id="rsol3">—</td>
             <td class="num" style="font-weight:600" id="rsolT">1,7904</td>
             <td class="num" style="font-weight:600" id="rsolUSD">US$ 167,03</td>
           </tr>
@@ -635,6 +675,7 @@
             <td class="asset"><span class="asset-dot" style="background:#8a63d2"></span>POL</td>
             <td class="num" id="rpol1">689,9944</td>
             <td class="num" id="rpol2">50,0000</td>
+            <td class="num" id="rpol3">—</td>
             <td class="num" style="font-weight:600" id="rpolT">739,9944</td>
             <td class="num" style="font-weight:600" id="rpolUSD">US$ 77,06</td>
           </tr>
@@ -642,6 +683,7 @@
             <td class="asset"><span class="asset-dot" style="background:#ec5f8a"></span>UNI</td>
             <td class="num" id="runi1">8,9983</td>
             <td class="num" id="runi2">—</td>
+            <td class="num" id="runi3">—</td>
             <td class="num" style="font-weight:600" id="runiT">8,9983</td>
             <td class="num" style="font-weight:600" id="runiUSD">US$ 38,64</td>
           </tr>
@@ -649,6 +691,7 @@
             <td class="asset muted">USDC em carteira / Aave / rewards</td>
             <td class="num muted" id="usdcC1">—</td>
             <td class="num" id="usdcC2">299,59</td>
+            <td class="num muted" id="usdcC3">—</td>
             <td class="num" style="font-weight:600" id="usdcTotalQty">299,59</td>
             <td class="num" style="font-weight:600" id="usdcUSD">US$ 299,59</td>
           </tr>
@@ -656,6 +699,7 @@
             <td class="asset"><span class="asset-dot" style="background:#5b8def"></span>Em pools de liquidez (Uniswap V3)</td>
             <td class="num" id="poolsC1">—</td>
             <td class="num" id="poolsC2">—</td>
+            <td class="num" id="poolsC3">—</td>
             <td class="num" style="font-weight:600" id="poolsTotalQty">—</td>
             <td class="num" style="font-weight:600" id="poolsUSD">US$ 0</td>
           </tr>
@@ -663,11 +707,12 @@
             <td class="asset" style="color:var(--bad)"><span class="asset-dot" style="background:var(--bad)"></span>USDC emprestado (passivo Aave)</td>
             <td class="num" style="color:var(--bad)" id="debtC1">− 12.134,99</td>
             <td class="num" style="color:var(--bad)" id="debtC2">− 1.369,83</td>
+            <td class="num" style="color:var(--bad)" id="debtC3">—</td>
             <td class="num" style="font-weight:600; color:var(--bad)" id="debtCT">− 13.504,82</td>
             <td class="num" style="font-weight:600; color:var(--bad)" id="debtCUSD">− US$ 13.504,82</td>
           </tr>
           <tr class="total">
-            <td colspan="4">Patrimônio líquido total</td>
+            <td colspan="5">Patrimônio líquido total</td>
             <td class="num" id="rollupTotal">US$ 47.437</td>
           </tr>
         </tbody>
@@ -682,13 +727,14 @@
     <div class="links">
       <a href="https://debank.com/profile/0x2af9997fc77e50a3cde92b6452ee2faa0ddf2a47" target="_blank" rel="noopener">Carteira 1 no DeBank ↗</a>
       <a href="https://debank.com/profile/0x68f0271fd7d9813f951419a1108fc1c9c0ba2072" target="_blank" rel="noopener">Carteira 2 no DeBank ↗</a>
+      <a href="https://debank.com/profile/0x88e8628ac3c8a3011ec215ad6ef8f867c23ede3d" target="_blank" rel="noopener">Carteira 3 no DeBank ↗</a>
     </div>
   </footer>
 
 </div>
 
 <script>
-  const totals = { combined: 47437, w1: 43379, w2: 4058 };
+  const totals = { combined: 47460, w1: 43379, w2: 4058, w3: 23 };
   const fxInput = document.getElementById('fx');
   const fxResult = document.getElementById('fxResult');
 
@@ -780,10 +826,11 @@
   const AAVE_WALLETS = {
     'Carteira 1': '0x2af9997fc77e50a3cde92b6452ee2faa0ddf2a47',
     'Carteira 2': '0x68f0271fd7d9813f951419a1108fc1c9c0ba2072',
+    'Carteira 3': '0x88e8628ac3c8a3011ec215ad6ef8f867c23ede3d',
   };
   // Poeira sem valor relevante para mapear (MON, WGC, MM.Finance) — fica no valor do snapshot.
-  const SPOT_STATIC = { 'Carteira 1': 29.61, 'Carteira 2': 0.03 };
-  const MERKL_REWARD = { 'Carteira 1': 0, 'Carteira 2': 1.73 }; // recompensa parada, sem fonte on-chain simples
+  const SPOT_STATIC = { 'Carteira 1': 29.61, 'Carteira 2': 0.03, 'Carteira 3': 0 };
+  const MERKL_REWARD = { 'Carteira 1': 0, 'Carteira 2': 1.73, 'Carteira 3': 0 }; // recompensa parada, sem fonte on-chain simples
 
   // ---- Estado compartilhado com o simulador ----
   // O painel é a única fonte dos números: a cada ciclo de leitura ele grava aqui o estado consolidado
@@ -791,32 +838,37 @@
   const SNAP_KEY = 'painel-cripto-estado-v1';
   const snap = { px: null, spot: null, aave: null, pools: null };
   // Parte do saldo em carteira coberta pela leitura ao vivo (cbBTC/WBTC, ETH/WETH, POL, SOL, UNI, HYPE) — começa com o valor do snapshot e é atualizada por refreshSpotLive().
-  let spotLive = { 'Carteira 1': 16844 - 29.61, 'Carteira 2': 1284 - 0.03 };
-  let aaveNet = { 'Carteira 1': 14669 + 11866, 'Carteira 2': 1700 + 1072 };
-  let poolsLive = { 'Carteira 1': 0, 'Carteira 2': 0 }; // valor em pools Uniswap V3, somado quando detectado
+  let spotLive = { 'Carteira 1': 16844 - 29.61, 'Carteira 2': 1284 - 0.03, 'Carteira 3': 23 };
+  let aaveNet = { 'Carteira 1': 14669 + 11866, 'Carteira 2': 1700 + 1072, 'Carteira 3': 0 };
+  let poolsLive = { 'Carteira 1': 0, 'Carteira 2': 0, 'Carteira 3': 0 }; // valor em pools Uniswap V3, somado quando detectado
   // Linha "USDC em carteira / Aave / rewards" da tabela de exposição: soma spot + Aave + Merkl.
   // spotLive já inclui o USDC (preço 1) no total da carteira — aqui é só composição/exibição.
-  let usdcSpot = { 'Carteira 1': 0, 'Carteira 2': 0 };
-  let usdcAaveMerkl = { 'Carteira 1': 0, 'Carteira 2': 0 };
+  let usdcSpot = { 'Carteira 1': 0, 'Carteira 2': 0, 'Carteira 3': 0 };
+  let usdcAaveMerkl = { 'Carteira 1': 0, 'Carteira 2': 0, 'Carteira 3': 0 };
+  const fmtQty2 = (n) => n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   function updateUsdcRow() {
     const u1 = usdcSpot['Carteira 1'] + usdcAaveMerkl['Carteira 1'];
     const u2 = usdcSpot['Carteira 2'] + usdcAaveMerkl['Carteira 2'];
-    document.getElementById('usdcC1').textContent = u1 > 0 ? u1.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
-    document.getElementById('usdcC2').textContent = u2 > 0 ? u2.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
-    document.getElementById('usdcTotalQty').textContent = (u1 + u2).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    document.getElementById('usdcUSD').textContent = fmtUSD2(u1 + u2);
+    const u3 = usdcSpot['Carteira 3'] + usdcAaveMerkl['Carteira 3'];
+    document.getElementById('usdcC1').textContent = u1 > 0 ? fmtQty2(u1) : '—';
+    document.getElementById('usdcC2').textContent = u2 > 0 ? fmtQty2(u2) : '—';
+    document.getElementById('usdcC3').textContent = u3 > 0 ? fmtQty2(u3) : '—';
+    document.getElementById('usdcTotalQty').textContent = fmtQty2(u1 + u2 + u3);
+    document.getElementById('usdcUSD').textContent = fmtUSD2(u1 + u2 + u3);
   }
 
   function recomputeTotals() {
-    const w1 = SPOT_STATIC['Carteira 1'] + spotLive['Carteira 1'] + aaveNet['Carteira 1'] + poolsLive['Carteira 1'];
-    const w2 = SPOT_STATIC['Carteira 2'] + spotLive['Carteira 2'] + aaveNet['Carteira 2'] + poolsLive['Carteira 2'];
+    const wt = (k) => SPOT_STATIC[k] + spotLive[k] + aaveNet[k] + poolsLive[k];
+    const w1 = wt('Carteira 1'), w2 = wt('Carteira 2'), w3 = wt('Carteira 3');
     document.getElementById('w1Total').textContent = fmtUSD0(w1);
     document.getElementById('w2Total').textContent = fmtUSD0(w2);
+    document.getElementById('w3Total').textContent = fmtUSD0(w3);
     document.getElementById('w1SpotTotal').textContent = fmtUSD0(SPOT_STATIC['Carteira 1'] + spotLive['Carteira 1']);
     document.getElementById('w2SpotTotal').textContent = fmtUSD0(SPOT_STATIC['Carteira 2'] + spotLive['Carteira 2']);
-    document.getElementById('heroTotal').textContent = fmtUSD0(w1 + w2);
-    document.getElementById('rollupTotal').textContent = fmtUSD0(w1 + w2);
-    totals.combined = w1 + w2; totals.w1 = w1; totals.w2 = w2;
+    document.getElementById('w3SpotTotal').textContent = fmtUSD0(SPOT_STATIC['Carteira 3'] + spotLive['Carteira 3']);
+    document.getElementById('heroTotal').textContent = fmtUSD0(w1 + w2 + w3);
+    document.getElementById('rollupTotal').textContent = fmtUSD0(w1 + w2 + w3);
+    totals.combined = w1 + w2 + w3; totals.w1 = w1; totals.w2 = w2; totals.w3 = w3;
     update();
   }
 
@@ -883,8 +935,8 @@
     }
 
     let supTotal = 0, debtTotal = 0;
-    const walletNet = { 'Carteira 1': 0, 'Carteira 2': 0 };
-    const walletDebt = { 'Carteira 1': 0, 'Carteira 2': 0 };
+    const walletNet = { 'Carteira 1': 0, 'Carteira 2': 0, 'Carteira 3': 0 };
+    const walletDebt = { 'Carteira 1': 0, 'Carteira 2': 0, 'Carteira 3': 0 };
     extras.forEach(r => {
       walletDebt[r.wallet] += r.debtUSD;
       supTotal += r.collateralUSD; debtTotal += r.debtUSD;
@@ -920,12 +972,13 @@
     const fmtDebt = (n) => '− ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     document.getElementById('debtC1').textContent = fmtDebt(walletDebt['Carteira 1']);
     document.getElementById('debtC2').textContent = fmtDebt(walletDebt['Carteira 2']);
+    document.getElementById('debtC3').textContent = walletDebt['Carteira 3'] > 0 ? fmtDebt(walletDebt['Carteira 3']) : '—';
     document.getElementById('debtCT').textContent = fmtDebt(debtTotal);
     document.getElementById('debtCUSD').textContent = '− ' + fmtUSD2(debtTotal);
 
     // USDC fornecido no Aave por carteira (aToken em cada rede) — só composição/exibição, já está
     // embutido no total de "Fornecido" acima (getUserAccountData soma todos os ativos), não some de novo.
-    const usdcByWallet = { 'Carteira 1': MERKL_REWARD['Carteira 1'], 'Carteira 2': MERKL_REWARD['Carteira 2'] };
+    const usdcByWallet = { 'Carteira 1': MERKL_REWARD['Carteira 1'], 'Carteira 2': MERKL_REWARD['Carteira 2'], 'Carteira 3': MERKL_REWARD['Carteira 3'] };
     composed.forEach(p => { usdcByWallet[p.wallet] += p.usdc; });
     usdcAaveMerkl = usdcByWallet;
     updateUsdcRow();
@@ -1040,6 +1093,27 @@
       erc20Bal(RPC.base, A_TOKENS.baseWETH, w2, 18),
       erc20Bal(RPC.base, A_TOKENS.baseCbBTC, w2, 8),
     ]);
+    // Carteira 3: leitura genérica (todos os ativos/redes rastreados) — spot + aTokens do Aave nas 3 redes.
+    const w3 = AAVE_WALLETS['Carteira 3'];
+    const [w3EthBase, w3EthArb, w3EthEth, w3WethBase, w3WethEth, w3CbbtcBase, w3WbtcArb, w3Pol, w3Hype,
+      w3UsdcBase, w3UsdcArb, w3UsdcPoly, w3UsdcEth,
+      w3AWbtcPoly, w3AWbtcArb, w3AWethPoly, w3AWethArb, w3AWethBase, w3ACbbtcBase] = await Promise.all([
+      nativeBal(RPC.base, w3), nativeBal(RPC.arbitrum, w3), nativeBal(RPC.ethereum, w3),
+      erc20Bal(RPC.base, SPOT_TOKENS.baseWETH, w3, 18), erc20Bal(RPC.ethereum, SPOT_TOKENS.ethWETH, w3, 18),
+      erc20Bal(RPC.base, SPOT_TOKENS.baseCbBTC, w3, 8), erc20Bal(RPC.arbitrum, SPOT_TOKENS.arbWBTC, w3, 8),
+      nativeBal(RPC.polygon, w3), nativeBal(RPC.hyperevm, w3),
+      erc20Bal(RPC.base, SPOT_TOKENS.baseUSDC, w3, 6), erc20Bal(RPC.arbitrum, SPOT_TOKENS.arbUSDC, w3, 6),
+      erc20Bal(RPC.polygon, SPOT_TOKENS.polyUSDC, w3, 6), erc20Bal(RPC.ethereum, SPOT_TOKENS.ethUSDC, w3, 6),
+      erc20Bal(RPC.polygon, A_TOKENS.polyArbWBTC, w3, 8), erc20Bal(RPC.arbitrum, A_TOKENS.polyArbWBTC, w3, 8),
+      erc20Bal(RPC.polygon, A_TOKENS.polyArbWETH, w3, 18), erc20Bal(RPC.arbitrum, A_TOKENS.polyArbWETH, w3, 18),
+      erc20Bal(RPC.base, A_TOKENS.baseWETH, w3, 18), erc20Bal(RPC.base, A_TOKENS.baseCbBTC, w3, 8),
+    ]);
+    const w3BtcQty = w3CbbtcBase + w3WbtcArb;
+    const w3EthQty = w3EthBase + w3EthArb + w3EthEth + w3WethBase + w3WethEth;
+    const w3UsdcQty = w3UsdcBase + w3UsdcArb + w3UsdcPoly + w3UsdcEth;
+    const w3BtcTotalQty = w3BtcQty + w3AWbtcPoly + w3AWbtcArb + w3ACbbtcBase;
+    const w3EthTotalQty = w3EthQty + w3AWethPoly + w3AWethArb + w3AWethBase;
+
     const w1BtcTotalQty = w1CbbtcQty + w1AavePolyWbtc + w1AaveArbWbtc;
     const w1EthTotalQty = w1EthQty + w1WethQty + w1AavePolyWeth + w1AaveArbWeth;
     const w2BtcTotalQty = w2WbtcQty + w2AaveArbWbtc + w2AaveBaseCbbtc;
@@ -1057,37 +1131,60 @@
     setSpotCell('w2pol', w2PolQty, polPrice);
     setSpotCell('w2hype', w2HypeQty, hypePrice);
 
+    setSpotCell('w3btc', w3BtcQty, btcPrice);
+    setSpotCell('w3eth', w3EthQty, ethPrice);
+    setSpotCell('w3pol', w3Pol, polPrice);
+    setSpotCell('w3hype', w3Hype, hypePrice);
+
     snap.px = { btc: btcPrice, eth: ethPrice, pol: polPrice, sol: solPrice, uni: uniPrice, hype: hypePrice };
     snap.spot = {
-      btc: w1CbbtcQty + w2WbtcQty,
-      eth: w1EthQty + w1WethQty + w2EthQty + w2WethQty,
-      usdc: w1UsdcQty + w2UsdcQty,
-      pol: w1PolQty + w2PolQty, sol: w1SolQty, uni: w1UniQty, hype: w2HypeQty,
+      btc: w1CbbtcQty + w2WbtcQty + w3BtcQty,
+      eth: w1EthQty + w1WethQty + w2EthQty + w2WethQty + w3EthQty,
+      usdc: w1UsdcQty + w2UsdcQty + w3UsdcQty,
+      pol: w1PolQty + w2PolQty + w3Pol, sol: w1SolQty, uni: w1UniQty, hype: w2HypeQty + w3Hype,
     };
+    spotLive['Carteira 3'] = w3BtcQty * btcPrice + w3EthQty * ethPrice + w3Pol * polPrice + w3Hype * hypePrice + w3UsdcQty;
+
+    // Barra de redes da Carteira 3 (saldo em carteira por rede, ao vivo)
+    const w3Chains = [
+      ['Base', '#5b8def', (w3EthBase + w3WethBase) * ethPrice + w3CbbtcBase * btcPrice + w3UsdcBase],
+      ['Arbitrum', '#3aa0c9', w3EthArb * ethPrice + w3WbtcArb * btcPrice + w3UsdcArb],
+      ['Ethereum', '#8a92b2', (w3EthEth + w3WethEth) * ethPrice + w3UsdcEth],
+      ['Polygon', '#8a63d2', w3Pol * polPrice + w3UsdcPoly],
+      ['HyperEVM', '#4ea67a', w3Hype * hypePrice],
+    ].filter(c => c[2] >= 0.01);
+    const w3ChainSum = w3Chains.reduce((s, c) => s + c[2], 0);
+    if (w3ChainSum > 0) {
+      document.getElementById('w3ChainBar').innerHTML = w3Chains.map(c => `<span style="width:${(c[2] / w3ChainSum * 100).toFixed(1)}%; background:${c[1]}"></span>`).join('');
+      document.getElementById('w3ChainLegend').innerHTML = w3Chains.map(c => `<span class="sw"><span class="chip" style="background:${c[1]}"></span>${c[0]} ${Math.round(c[2] / w3ChainSum * 100)}% · ${fmtUSD0(c[2])}</span>`).join('');
+    }
     spotLive['Carteira 1'] = w1CbbtcQty * btcPrice + w1EthQty * ethPrice + w1WethQty * ethPrice + w1PolQty * polPrice + w1UniQty * uniPrice + w1SolQty * solPrice + w1UsdcQty;
     spotLive['Carteira 2'] = w2WbtcQty * btcPrice + w2WethQty * ethPrice + w2EthQty * ethPrice + w2PolQty * polPrice + w2HypeQty * hypePrice + w2UsdcQty;
     // Tabela "Exposição consolidada por ativo": mesmas quantidades ao vivo das tabelas de saldo acima
     // (BTC/ETH somam carteira + Aave; antes essas linhas ficavam presas no snapshot).
     const fmtQ = (n) => n > 0 ? n.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 }) : '—';
-    function setRollupRow(id, q1, q2, price) {
+    function setRollupRow(id, q1, q2, q3, price) {
       document.getElementById('r' + id + '1').textContent = fmtQ(q1);
       document.getElementById('r' + id + '2').textContent = fmtQ(q2);
-      document.getElementById('r' + id + 'T').textContent = fmtQ(q1 + q2);
-      document.getElementById('r' + id + 'USD').textContent = fmtUSD2((q1 + q2) * price);
+      document.getElementById('r' + id + '3').textContent = fmtQ(q3);
+      document.getElementById('r' + id + 'T').textContent = fmtQ(q1 + q2 + q3);
+      document.getElementById('r' + id + 'USD').textContent = fmtUSD2((q1 + q2 + q3) * price);
     }
-    setRollupRow('btc', w1BtcTotalQty, w2BtcTotalQty, btcPrice);
-    setRollupRow('eth', w1EthTotalQty, w2EthTotalQty, ethPrice);
-    setRollupRow('hype', 0, w2HypeQty, hypePrice);
-    setRollupRow('sol', w1SolQty, 0, solPrice);
-    setRollupRow('pol', w1PolQty, w2PolQty, polPrice);
-    setRollupRow('uni', w1UniQty, 0, uniPrice);
+    setRollupRow('btc', w1BtcTotalQty, w2BtcTotalQty, w3BtcTotalQty, btcPrice);
+    setRollupRow('eth', w1EthTotalQty, w2EthTotalQty, w3EthTotalQty, ethPrice);
+    setRollupRow('hype', 0, w2HypeQty, w3Hype, hypePrice);
+    setRollupRow('sol', w1SolQty, 0, 0, solPrice);
+    setRollupRow('pol', w1PolQty, w2PolQty, w3Pol, polPrice);
+    setRollupRow('uni', w1UniQty, 0, 0, uniPrice);
 
-    usdcSpot = { 'Carteira 1': w1UsdcQty, 'Carteira 2': w2UsdcQty };
+    usdcSpot = { 'Carteira 1': w1UsdcQty, 'Carteira 2': w2UsdcQty, 'Carteira 3': w3UsdcQty };
     updateUsdcRow();
     document.getElementById('w1usdcQty').textContent = w1UsdcQty > 0 ? w1UsdcQty.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
     document.getElementById('w1usdcVal').textContent = fmtUSD2(w1UsdcQty);
     document.getElementById('w2usdcQty').textContent = w2UsdcQty > 0 ? w2UsdcQty.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
     document.getElementById('w2usdcVal').textContent = fmtUSD2(w2UsdcQty);
+    document.getElementById('w3usdcQty').textContent = w3UsdcQty > 0 ? w3UsdcQty.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
+    document.getElementById('w3usdcVal').textContent = fmtUSD2(w3UsdcQty);
 
     recomputeTotals();
     document.getElementById('spotLiveBadge').hidden = false;
@@ -1106,8 +1203,10 @@
       const w2Blend = blend24h(w2BtcTotalQty, w2EthTotalQty);
       if (w1Blend != null) setDeltaPill('w1DeltaPill', w1Blend, '');
       if (w2Blend != null) setDeltaPill('w2DeltaPill', w2Blend, '');
-      const combinedBtcUSD = (w1BtcTotalQty + w2BtcTotalQty) * btcPrice;
-      const combinedEthUSD = (w1EthTotalQty + w2EthTotalQty) * ethPrice;
+      const w3Blend = blend24h(w3BtcTotalQty, w3EthTotalQty);
+      if (w3Blend != null) { document.getElementById('w3DeltaPill').hidden = false; setDeltaPill('w3DeltaPill', w3Blend, ''); }
+      const combinedBtcUSD = (w1BtcTotalQty + w2BtcTotalQty + w3BtcTotalQty) * btcPrice;
+      const combinedEthUSD = (w1EthTotalQty + w2EthTotalQty + w3EthTotalQty) * ethPrice;
       const combinedTotal = combinedBtcUSD + combinedEthUSD;
       if (combinedTotal > 0) {
         const blended = (combinedBtcUSD * btc24h + combinedEthUSD * eth24h) / combinedTotal;
@@ -1240,13 +1339,14 @@
     }
     snap.pools = poolList;
 
-    const p1 = poolsLive['Carteira 1'], p2 = poolsLive['Carteira 2'];
-    if (p1 + p2 > 0) {
+    const p1 = poolsLive['Carteira 1'], p2 = poolsLive['Carteira 2'], p3 = poolsLive['Carteira 3'];
+    if (p1 + p2 + p3 > 0) {
       document.getElementById('poolsRow').style.display = '';
       document.getElementById('poolsC1').textContent = p1 > 0 ? fmtUSD0(p1) : '—';
       document.getElementById('poolsC2').textContent = p2 > 0 ? fmtUSD0(p2) : '—';
-      document.getElementById('poolsTotalQty').textContent = fmtUSD0(p1 + p2);
-      document.getElementById('poolsUSD').textContent = fmtUSD0(p1 + p2);
+      document.getElementById('poolsC3').textContent = p3 > 0 ? fmtUSD0(p3) : '—';
+      document.getElementById('poolsTotalQty').textContent = fmtUSD0(p1 + p2 + p3);
+      document.getElementById('poolsUSD').textContent = fmtUSD0(p1 + p2 + p3);
     }
     recomputeTotals();
   }
@@ -1268,7 +1368,7 @@
       const sum = (arr, k) => arr.reduce((s, p) => s + p[k], 0);
       const btcQty = snap.spot.btc + sum(positions, 'btc');
       const ethQty = snap.spot.eth + sum(positions, 'eth');
-      const usdcAsset = snap.spot.usdc + sum(positions, 'usdc') + MERKL_REWARD['Carteira 1'] + MERKL_REWARD['Carteira 2'];
+      const usdcAsset = snap.spot.usdc + sum(positions, 'usdc') + MERKL_REWARD['Carteira 1'] + MERKL_REWARD['Carteira 2'] + MERKL_REWARD['Carteira 3'];
       const usdcDebt = sum(positions, 'borrowed');
       const poolsUsd = sum(pools, 'staticUsd');
       const otherUsd = totals.combined - (btcQty * px.btc + ethQty * px.eth + usdcAsset - usdcDebt + poolsUsd);

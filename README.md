@@ -14,6 +14,7 @@ Painel pessoal de acompanhamento das carteiras cripto, com posições Aave V3, p
 
 - Carteira 1: `0x2af9997fc77e50a3cde92b6452ee2faa0ddf2a47`
 - Carteira 2: `0x68f0271fd7d9813f951419a1108fc1c9c0ba2072`
+- Carteira 3: `0x88e8628ac3c8a3011ec215ad6ef8f867c23ede3d`
 
 ## Dados ao vivo
 
