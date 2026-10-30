@@ -428,13 +428,13 @@
         <span class="delta-pill down" id="w1DeltaPill">▼ 2,98%</span>
       </div>
       <div class="wcard-total num" id="w1Total">US$ 43.379</div>
-      <div class="chainbar">
+      <div class="chainbar" id="w1ChainBar">
         <span style="width:38%; background:#5b8def"></span>
         <span style="width:34%; background:#8a63d2"></span>
         <span style="width:27%; background:#3aa0c9"></span>
         <span style="width:1%; background:var(--border)"></span>
       </div>
-      <div class="chain-legend">
+      <div class="chain-legend" id="w1ChainLegend">
         <span class="sw"><span class="chip" style="background:#5b8def"></span>Base 38% · US$ 16.537</span>
         <span class="sw"><span class="chip" style="background:#8a63d2"></span>Polygon 34% · US$ 14.947</span>
         <span class="sw"><span class="chip" style="background:#3aa0c9"></span>Arbitrum 27% · US$ 11.876</span>
@@ -451,13 +451,13 @@
         <span class="delta-pill down" id="w2DeltaPill">▼ 2,59%</span>
       </div>
       <div class="wcard-total num" id="w2Total">US$ 4.058</div>
-      <div class="chainbar">
+      <div class="chainbar" id="w2ChainBar">
         <span style="width:65%; background:#3aa0c9"></span>
         <span style="width:27%; background:#5b8def"></span>
         <span style="width:6%; background:#4ea67a"></span>
         <span style="width:2%; background:#c98a3a"></span>
       </div>
-      <div class="chain-legend">
+      <div class="chain-legend" id="w2ChainLegend">
         <span class="sw"><span class="chip" style="background:#3aa0c9"></span>Arbitrum 65% · US$ 2.628</span>
         <span class="sw"><span class="chip" style="background:#5b8def"></span>Base 27% · US$ 1.076</span>
         <span class="sw"><span class="chip" style="background:#4ea67a"></span>HyperEVM 6% · US$ 252</span>
@@ -476,7 +476,7 @@
       <div class="wcard-total num" id="w3Total">US$ 23</div>
       <div class="chainbar" id="w3ChainBar"></div>
       <div class="chain-legend" id="w3ChainLegend">
-        <span class="sw muted">Saldo em carteira por rede, lido on-chain.</span>
+        <span class="sw muted">Patrimônio por rede, lido on-chain.</span>
       </div>
     </div>
 
@@ -857,6 +857,28 @@
     document.getElementById('usdcUSD').textContent = fmtUSD2(u1 + u2 + u3);
   }
 
+  // Patrimônio por rede de cada carteira: saldo em carteira + Aave (líquido) + pools Uniswap V3.
+  // O que sobra até o total (poeira, recompensa Merkl) aparece como "Outros".
+  const chainParts = { spot: {}, aave: {}, pools: {} };
+  const CHAIN_COLORS = { Base: '#5b8def', Polygon: '#8a63d2', Arbitrum: '#3aa0c9', HyperEVM: '#4ea67a', Ethereum: '#8a92b2', Outros: '#c98a3a' };
+  function renderChainBars(totalsByWallet) {
+    if (!snap.spot || !snap.aave) return; // espera saldo + Aave do mesmo ciclo, senão a divisão sai incompleta
+    for (const [wallet, n] of [['Carteira 1', 1], ['Carteira 2', 2], ['Carteira 3', 3]]) {
+      const byChain = {};
+      for (const part of Object.values(chainParts)) {
+        for (const [chain, usd] of Object.entries(part[wallet] || {})) byChain[chain] = (byChain[chain] || 0) + usd;
+      }
+      const total = totalsByWallet[wallet];
+      const known = Object.values(byChain).reduce((s, v) => s + v, 0);
+      if (!(known > 0) || !(total > 0)) continue; // sem leitura ao vivo ainda: mantém o que está na tela
+      if (total - known > 0.005 * total) byChain.Outros = total - known;
+      const rows = Object.entries(byChain).filter(([, v]) => v >= 0.01).sort((a, b) => b[1] - a[1]);
+      const sum = rows.reduce((s, [, v]) => s + v, 0);
+      document.getElementById('w' + n + 'ChainBar').innerHTML = rows.map(([c, v]) => `<span style="width:${(v / sum * 100).toFixed(1)}%; background:${CHAIN_COLORS[c]}"></span>`).join('');
+      document.getElementById('w' + n + 'ChainLegend').innerHTML = rows.map(([c, v]) => `<span class="sw"><span class="chip" style="background:${CHAIN_COLORS[c]}"></span>${c} ${Math.round(v / sum * 100)}% · ${fmtUSD0(v)}</span>`).join('');
+    }
+  }
+
   function recomputeTotals() {
     const wt = (k) => SPOT_STATIC[k] + spotLive[k] + aaveNet[k] + poolsLive[k];
     const w1 = wt('Carteira 1'), w2 = wt('Carteira 2'), w3 = wt('Carteira 3');
@@ -869,6 +891,7 @@
     document.getElementById('heroTotal').textContent = fmtUSD0(w1 + w2 + w3);
     document.getElementById('rollupTotal').textContent = fmtUSD0(w1 + w2 + w3);
     totals.combined = w1 + w2 + w3; totals.w1 = w1; totals.w2 = w2; totals.w3 = w3;
+    renderChainBars({ 'Carteira 1': w1, 'Carteira 2': w2, 'Carteira 3': w3 });
     update();
   }
 
@@ -984,6 +1007,11 @@
     updateUsdcRow();
 
     snap.aave = { positions: composed };
+    chainParts.aave = {};
+    [...results, ...extras].forEach(r => {
+      const part = chainParts.aave[r.wallet] || (chainParts.aave[r.wallet] = {});
+      part[r.chain] = (part[r.chain] || 0) + r.collateralUSD - r.debtUSD;
+    });
     aaveNet = walletNet;
     recomputeTotals();
     document.getElementById('aaveLiveBadge').hidden = false;
@@ -1145,19 +1173,29 @@
     };
     spotLive['Carteira 3'] = w3BtcQty * btcPrice + w3EthQty * ethPrice + w3Pol * polPrice + w3Hype * hypePrice + w3UsdcQty;
 
-    // Barra de redes da Carteira 3 (saldo em carteira por rede, ao vivo)
-    const w3Chains = [
-      ['Base', '#5b8def', (w3EthBase + w3WethBase) * ethPrice + w3CbbtcBase * btcPrice + w3UsdcBase],
-      ['Arbitrum', '#3aa0c9', w3EthArb * ethPrice + w3WbtcArb * btcPrice + w3UsdcArb],
-      ['Ethereum', '#8a92b2', (w3EthEth + w3WethEth) * ethPrice + w3UsdcEth],
-      ['Polygon', '#8a63d2', w3Pol * polPrice + w3UsdcPoly],
-      ['HyperEVM', '#4ea67a', w3Hype * hypePrice],
-    ].filter(c => c[2] >= 0.01);
-    const w3ChainSum = w3Chains.reduce((s, c) => s + c[2], 0);
-    if (w3ChainSum > 0) {
-      document.getElementById('w3ChainBar').innerHTML = w3Chains.map(c => `<span style="width:${(c[2] / w3ChainSum * 100).toFixed(1)}%; background:${c[1]}"></span>`).join('');
-      document.getElementById('w3ChainLegend').innerHTML = w3Chains.map(c => `<span class="sw"><span class="chip" style="background:${c[1]}"></span>${c[0]} ${Math.round(c[2] / w3ChainSum * 100)}% · ${fmtUSD0(c[2])}</span>`).join('');
-    }
+    // Saldo em carteira por rede de cada carteira (ao vivo) — alimenta as barras de redes dos cartões.
+    chainParts.spot = {
+      'Carteira 1': {
+        Base: (w1EthQty + w1WethQty) * ethPrice + w1CbbtcQty * btcPrice + w1BaseUsdc,
+        Polygon: w1PolQty * polPrice + w1UniQty * uniPrice + w1SolQty * solPrice + w1PolyUsdc,
+        Arbitrum: w1ArbUsdc,
+        Ethereum: w1EthUsdc,
+      },
+      'Carteira 2': {
+        Base: w2BaseEth * ethPrice + w2BaseUsdc,
+        Arbitrum: w2ArbEth * ethPrice + w2WbtcQty * btcPrice + w2ArbUsdc,
+        Ethereum: (w2EthEth + w2WethQty) * ethPrice + w2EthUsdc,
+        Polygon: w2PolQty * polPrice + w2PolyUsdc,
+        HyperEVM: w2HypeQty * hypePrice,
+      },
+      'Carteira 3': {
+        Base: (w3EthBase + w3WethBase) * ethPrice + w3CbbtcBase * btcPrice + w3UsdcBase,
+        Arbitrum: w3EthArb * ethPrice + w3WbtcArb * btcPrice + w3UsdcArb,
+        Ethereum: (w3EthEth + w3WethEth) * ethPrice + w3UsdcEth,
+        Polygon: w3Pol * polPrice + w3UsdcPoly,
+        HyperEVM: w3Hype * hypePrice,
+      },
+    };
     spotLive['Carteira 1'] = w1CbbtcQty * btcPrice + w1EthQty * ethPrice + w1WethQty * ethPrice + w1PolQty * polPrice + w1UniQty * uniPrice + w1SolQty * solPrice + w1UsdcQty;
     spotLive['Carteira 2'] = w2WbtcQty * btcPrice + w2WethQty * ethPrice + w2EthQty * ethPrice + w2PolQty * polPrice + w2HypeQty * hypePrice + w2UsdcQty;
     // Tabela "Exposição consolidada por ativo": mesmas quantidades ao vivo das tabelas de saldo acima
@@ -1338,6 +1376,11 @@
       poolsLive[walletId] = walletUSD;
     }
     snap.pools = poolList;
+    chainParts.pools = {};
+    poolList.forEach(p => {
+      const part = chainParts.pools[p.wallet] || (chainParts.pools[p.wallet] = {});
+      part[p.chain] = (part[p.chain] || 0) + p.staticUsd;
+    });
 
     const p1 = poolsLive['Carteira 1'], p2 = poolsLive['Carteira 2'], p3 = poolsLive['Carteira 3'];
     if (p1 + p2 + p3 > 0) {
