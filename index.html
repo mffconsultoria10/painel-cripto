@@ -614,7 +614,7 @@
             <tr><td class="asset"><span class="asset-dot" style="background:#2775CA"></span>USDC</td><td class="num" id="w3usdcQty">11,24</td><td class="num muted">1,00</td><td class="num" id="w3usdcVal">US$ 11,24</td></tr>
           </tbody>
         </table>
-        <div class="note-row">Aave e saldo lidos on-chain. Fora do alcance das leituras, valores manuais do DeBank (11/11/2026): pool Project X no HyperEVM (US$ 6.712), pool Uniswap V3 + carteira na Robinhood (US$ 5.940) e ARB na Arbitrum (US$ 15).</div>
+        <div class="note-row">Aave e saldo lidos on-chain. Fora do alcance das leituras, valores manuais do DeBank (11/11/2026): pool Uniswap V3 + carteira na Robinhood (US$ 5.940) e ARB na Arbitrum (US$ 15). A pool Project X no HyperEVM é lida on-chain.</div>
       </div>
 
     </div>
@@ -836,7 +836,6 @@
   // 11/11/2026 — atualizar quando mudarem. Somam ao total da carteira e aparecem como "manual" na tela.
   const MANUAL_POSITIONS = {
     'Carteira 3': [
-      { chain: 'HyperEVM', usd: 6711.60, label: 'Project X · WHYPE+UBTC (pool)' },
       { chain: 'Robinhood', usd: 5696.18, label: 'Uniswap V3 · WETH+NVDA (pool)' },
       { chain: 'Robinhood', usd: 244.22, label: 'ETH 0,1079 + NVDA 0,1363 (carteira)' },
       { chain: 'Arbitrum', usd: 15.11, label: 'ARB 99,60 (carteira)' },
@@ -1291,6 +1290,7 @@
     Arbitrum: { rpc: 'https://arbitrum-one-rpc.publicnode.com', posManager: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88', factory: '0x1F98431c8aD98523631AE4a59f267346ea31F984' },
     Base:     { rpc: 'https://base.publicnode.com',             posManager: '0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1', factory: '0x33128a8fC17869897dcE68Ed026d694621f6FDfD' },
     Polygon:  { rpc: 'https://polygon-bor-rpc.publicnode.com',   posManager: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88', factory: '0x1F98431c8aD98523631AE4a59f267346ea31F984' },
+    HyperEVM: { rpc: 'https://rpc.hyperliquid.xyz/evm',           posManager: '0xeaD19AE861c29bBb2101E834922B2FEee69B9091', factory: '0xfF7B3e8C00e57ea31477c32A5B52a58Eea47b072' }, // Project X (fork Uniswap V3)
   };
   function decodeSignedWord(hex64) {
     const v = BigInt('0x' + hex64);
@@ -1322,8 +1322,9 @@
   }
 
   async function refreshPoolsLive() {
-    const priceData = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd').then(r => r.json());
-    const priceMap = { WBTC: priceData.bitcoin.usd, cbBTC: priceData.bitcoin.usd, BTC: priceData.bitcoin.usd, WETH: priceData.ethereum.usd, ETH: priceData.ethereum.usd, USDC: 1, USDT: 1, DAI: 1, USDbC: 1 };
+    const priceData = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,hyperliquid&vs_currencies=usd').then(r => r.json());
+    const hypeUsd = (priceData.hyperliquid || {}).usd || 0;
+    const priceMap = { WBTC: priceData.bitcoin.usd, cbBTC: priceData.bitcoin.usd, BTC: priceData.bitcoin.usd, UBTC: priceData.bitcoin.usd, WETH: priceData.ethereum.usd, ETH: priceData.ethereum.usd, WHYPE: hypeUsd, HYPE: hypeUsd, USDC: 1, USDT: 1, DAI: 1, USDbC: 1 };
 
     // Pools de BTC/ETH contra stablecoin podem ser reavaliadas pelo simulador (liquidez concentrada + IL).
     const FAMILY = { WBTC: 'btc', cbBTC: 'btc', BTC: 'btc', WETH: 'eth', ETH: 'eth' };

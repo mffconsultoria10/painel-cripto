@@ -519,6 +519,8 @@
     Arbitrum: { rpc: 'https://arbitrum-one-rpc.publicnode.com', logsRpc: 'https://arb1.arbitrum.io/rpc',      posManager: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88', factory: '0x1F98431c8aD98523631AE4a59f267346ea31F984' },
     Base:     { rpc: 'https://base.publicnode.com',             logsRpc: 'https://mainnet.base.org',           posManager: '0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1', factory: '0x33128a8fC17869897dcE68Ed026d694621f6FDfD' },
     Polygon:  { rpc: 'https://polygon-bor-rpc.publicnode.com',   logsRpc: 'https://polygon-bor-rpc.publicnode.com', posManager: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88', factory: '0x1F98431c8aD98523631AE4a59f267346ea31F984' },
+    // Project X (fork Uniswap V3 no HyperEVM)
+    HyperEVM: { rpc: 'https://rpc.hyperliquid.xyz/evm', logsRpc: 'https://rpc.hyperliquid.xyz/evm', posManager: '0xeaD19AE861c29bBb2101E834922B2FEee69B9091', factory: '0xfF7B3e8C00e57ea31477c32A5B52a58Eea47b072' },
   };
   const INCREASE_LIQUIDITY_TOPIC = '0x3067048beee31b25b2f1681f88dac838c8bba36af25bfb2b7cf7473a5847e35f';
   // Selectors validados via keccak256 próprio (calculado e conferido nesta sessão) contra o contrato real.
@@ -675,8 +677,8 @@
   async function detectPoolsLive() {
     let priceMap = {};
     try {
-      const p = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd').then(r => r.json());
-      priceMap = { WBTC: p.bitcoin.usd, cbBTC: p.bitcoin.usd, BTC: p.bitcoin.usd, WETH: p.ethereum.usd, ETH: p.ethereum.usd, USDC: 1, USDT: 1, DAI: 1, USDbC: 1 };
+      const p = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,hyperliquid&vs_currencies=usd').then(r => r.json());
+      priceMap = { WBTC: p.bitcoin.usd, cbBTC: p.bitcoin.usd, BTC: p.bitcoin.usd, UBTC: p.bitcoin.usd, WETH: p.ethereum.usd, ETH: p.ethereum.usd, WHYPE: (p.hyperliquid || {}).usd, HYPE: (p.hyperliquid || {}).usd, USDC: 1, USDT: 1, DAI: 1, USDbC: 1 };
     } catch (e) { /* segue sem preço USD — mostra valor em termos do ativo B */ }
 
     const found = [];
