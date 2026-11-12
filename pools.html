@@ -521,6 +521,8 @@
     Polygon:  { rpc: 'https://polygon-bor-rpc.publicnode.com',   logsRpc: 'https://polygon-bor-rpc.publicnode.com', posManager: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88', factory: '0x1F98431c8aD98523631AE4a59f267346ea31F984' },
     // Project X (fork Uniswap V3 no HyperEVM)
     HyperEVM: { rpc: 'https://rpc.hyperliquid.xyz/evm', logsRpc: 'https://rpc.hyperliquid.xyz/evm', posManager: '0xeaD19AE861c29bBb2101E834922B2FEee69B9091', factory: '0xfF7B3e8C00e57ea31477c32A5B52a58Eea47b072' },
+    // Uniswap V3 oficial na Robinhood Chain (chain ID 4663)
+    Robinhood: { rpc: 'https://rpc.mainnet.chain.robinhood.com', logsRpc: 'https://rpc.mainnet.chain.robinhood.com', posManager: '0x73991a25c818bf1f1128deaab1492d45638de0d3', factory: '0x1f7d7550b1b028f7571e69a784071f0205fd2efa' },
   };
   const INCREASE_LIQUIDITY_TOPIC = '0x3067048beee31b25b2f1681f88dac838c8bba36af25bfb2b7cf7473a5847e35f';
   // Selectors validados via keccak256 próprio (calculado e conferido nesta sessão) contra o contrato real.
@@ -680,11 +682,19 @@
       const p = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,hyperliquid&vs_currencies=usd').then(r => r.json());
       priceMap = { WBTC: p.bitcoin.usd, cbBTC: p.bitcoin.usd, BTC: p.bitcoin.usd, UBTC: p.bitcoin.usd, WETH: p.ethereum.usd, ETH: p.ethereum.usd, WHYPE: (p.hyperliquid || {}).usd, HYPE: (p.hyperliquid || {}).usd, USDC: 1, USDT: 1, DAI: 1, USDbC: 1 };
     } catch (e) { /* segue sem preço USD — mostra valor em termos do ativo B */ }
+    try {
+      // NVDA: token tokenizado "NVIDIA (bStocks)" no CoinGecko, mesmo preço da ação
+      const n = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=nvidia-bstocks&vs_currencies=usd').then(r => r.json());
+      if (n['nvidia-bstocks']) priceMap.NVDA = n['nvidia-bstocks'].usd;
+    } catch (e) { /* sem preço do NVDA: a pool aparece com valor estimado */ }
 
     const found = [];
     for (const [walletId, owner] of Object.entries(UNI_WALLETS)) {
       for (const [chainName, cfg] of Object.entries(UNI_CHAINS)) {
+        try {
         const balRes = await ethCallBatch(cfg.rpc, [{ id: 'b', to: cfg.posManager, data: '0x70a08231' + padHexU(owner.slice(2).toLowerCase()) }]);
+        // Sem resposta da rede = erro, não "zero posições"
+        if (balRes.b === undefined) throw new Error('rede sem resposta');
         const n = parseInt(balRes.b, 16) || 0;
         if (n === 0) continue;
 
@@ -799,6 +809,7 @@
             usdEstimated: !hasUsd,
           });
         }
+        } catch (e) { /* rede sem resposta: as outras redes seguem */ }
       }
     }
     return found;
