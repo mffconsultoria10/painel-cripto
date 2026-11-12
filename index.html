@@ -533,8 +533,24 @@
             <td class="num" id="debt3">US$ 542,10</td>
             <td class="num" id="net3" style="font-weight:600">US$ 1.072</td>
           </tr>
+          <tr data-wallet="Carteira 3" data-chain="Arbitrum">
+            <td>Carteira 3</td>
+            <td class="muted">Arbitrum</td>
+            <td class="num"><span class="hf-pill good" id="hf4">2,60</span></td>
+            <td class="num" id="sup4">US$ 18.996,64</td>
+            <td class="num" id="debt4">US$ 5.998,78</td>
+            <td class="num" id="net4" style="font-weight:600">US$ 12.998</td>
+          </tr>
+          <tr data-wallet="Carteira 3" data-chain="Base">
+            <td>Carteira 3</td>
+            <td class="muted">Base</td>
+            <td class="num"><span class="hf-pill good" id="hf5">2,55</span></td>
+            <td class="num" id="sup5">US$ 21.241,32</td>
+            <td class="num" id="debt5">US$ 6.998,23</td>
+            <td class="num" id="net5" style="font-weight:600">US$ 14.243</td>
+          </tr>
           <tr class="total">
-            <td colspan="3">Total das 4 posições</td>
+            <td colspan="3">Total das 6 posições</td>
             <td class="num" id="supTotal">US$ 42.811,48</td>
             <td class="num" id="debtTotal">US$ 13.504,82</td>
             <td class="num" id="netTotal">US$ 29.306,66</td>
@@ -942,6 +958,8 @@
       { idx: 1, wallet: 'Carteira 1', chain: 'Arbitrum' },
       { idx: 2, wallet: 'Carteira 2', chain: 'Arbitrum' },
       { idx: 3, wallet: 'Carteira 2', chain: 'Base' },
+      { idx: 4, wallet: 'Carteira 3', chain: 'Arbitrum' },
+      { idx: 5, wallet: 'Carteira 3', chain: 'Base' },
     ];
     const selector = '0xbf92857c';
     const results = [];
