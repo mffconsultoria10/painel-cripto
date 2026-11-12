@@ -473,7 +473,7 @@
         </div>
         <span class="delta-pill" id="w3DeltaPill" hidden></span>
       </div>
-      <div class="wcard-total num" id="w3Total">US$ 23</div>
+      <div class="wcard-total num" id="w3Total">US$ 42.142</div>
       <div class="chainbar" id="w3ChainBar"></div>
       <div class="chain-legend" id="w3ChainLegend">
         <span class="sw muted">Patrimônio por rede, lido on-chain.</span>
@@ -600,7 +600,7 @@
       <div class="detail-panel">
         <div class="detail-panel-head">
           <span class="t">Carteira 3 · 0x88e8…de3d</span>
-          <span class="v" id="w3SpotTotal">US$ 23</span>
+          <span class="v" id="w3SpotTotal">US$ 2.234</span>
         </div>
         <table>
           <thead>
@@ -614,7 +614,7 @@
             <tr><td class="asset"><span class="asset-dot" style="background:#2775CA"></span>USDC</td><td class="num" id="w3usdcQty">11,24</td><td class="num muted">1,00</td><td class="num" id="w3usdcVal">US$ 11,24</td></tr>
           </tbody>
         </table>
-        <div class="note-row">Sem posições em Aave nem pools Uniswap V3 detectadas até agora — se surgirem, entram automaticamente.</div>
+        <div class="note-row">Aave e saldo lidos on-chain. Fora do alcance das leituras, valores manuais do DeBank (11/11/2026): pool Project X no HyperEVM (US$ 6.712), pool Uniswap V3 + carteira na Robinhood (US$ 5.940) e ARB na Arbitrum (US$ 15).</div>
       </div>
 
     </div>
@@ -831,6 +831,19 @@
   // Poeira sem valor relevante para mapear (MON, WGC, MM.Finance) — fica no valor do snapshot.
   const SPOT_STATIC = { 'Carteira 1': 29.61, 'Carteira 2': 0.03, 'Carteira 3': 0 };
   const MERKL_REWARD = { 'Carteira 1': 0, 'Carteira 2': 1.73, 'Carteira 3': 0 }; // recompensa parada, sem fonte on-chain simples
+  // Posições que as leituras on-chain deste painel não alcançam: pool Project X (fork do Uniswap v4, sem endereço
+  // confirmado), rede Robinhood (RPC sem resposta na checagem) e ARB na Arbitrum. Valores copiados do DeBank em
+  // 11/11/2026 — atualizar quando mudarem. Somam ao total da carteira e aparecem como "manual" na tela.
+  const MANUAL_POSITIONS = {
+    'Carteira 3': [
+      { chain: 'HyperEVM', usd: 6711.60, label: 'Project X · WHYPE+UBTC (pool)' },
+      { chain: 'Robinhood', usd: 5696.18, label: 'Uniswap V3 · WETH+NVDA (pool)' },
+      { chain: 'Robinhood', usd: 244.22, label: 'ETH 0,1079 + NVDA 0,1363 (carteira)' },
+      { chain: 'Arbitrum', usd: 15.11, label: 'ARB 99,60 (carteira)' },
+    ],
+  };
+  const manualUSD = {};
+  for (const [w, items] of Object.entries(MANUAL_POSITIONS)) manualUSD[w] = items.reduce((s, i) => s + i.usd, 0);
 
   // ---- Estado compartilhado com o simulador ----
   // O painel é a única fonte dos números: a cada ciclo de leitura ele grava aqui o estado consolidado
@@ -859,8 +872,11 @@
 
   // Patrimônio por rede de cada carteira: saldo em carteira + Aave (líquido) + pools Uniswap V3.
   // O que sobra até o total (poeira, recompensa Merkl) aparece como "Outros".
-  const chainParts = { spot: {}, aave: {}, pools: {} };
-  const CHAIN_COLORS = { Base: '#5b8def', Polygon: '#8a63d2', Arbitrum: '#3aa0c9', HyperEVM: '#4ea67a', Ethereum: '#8a92b2', Outros: '#c98a3a' };
+  const chainParts = { spot: {}, aave: {}, pools: {}, manual: {} };
+  for (const [w, items] of Object.entries(MANUAL_POSITIONS)) {
+    for (const i of items) chainParts.manual[w] = { ...chainParts.manual[w], [i.chain]: ((chainParts.manual[w] || {})[i.chain] || 0) + i.usd };
+  }
+  const CHAIN_COLORS = { Base: '#5b8def', Polygon: '#8a63d2', Arbitrum: '#3aa0c9', HyperEVM: '#4ea67a', Ethereum: '#8a92b2', Robinhood: '#d4a017', Outros: '#c98a3a' };
   function renderChainBars(totalsByWallet) {
     if (!snap.spot || !snap.aave) return; // espera saldo + Aave do mesmo ciclo, senão a divisão sai incompleta
     for (const [wallet, n] of [['Carteira 1', 1], ['Carteira 2', 2], ['Carteira 3', 3]]) {
@@ -880,7 +896,7 @@
   }
 
   function recomputeTotals() {
-    const wt = (k) => SPOT_STATIC[k] + spotLive[k] + aaveNet[k] + poolsLive[k];
+    const wt = (k) => SPOT_STATIC[k] + spotLive[k] + aaveNet[k] + poolsLive[k] + (manualUSD[k] || 0);
     const w1 = wt('Carteira 1'), w2 = wt('Carteira 2'), w3 = wt('Carteira 3');
     document.getElementById('w1Total').textContent = fmtUSD0(w1);
     document.getElementById('w2Total').textContent = fmtUSD0(w2);
