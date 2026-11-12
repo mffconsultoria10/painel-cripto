@@ -836,13 +836,15 @@
   // 11/11/2026 — atualizar quando mudarem. Somam ao total da carteira e aparecem como "manual" na tela.
   const MANUAL_POSITIONS = {
     'Carteira 3': [
-      { chain: 'Robinhood', usd: 5719.00, label: 'Uniswap V3 · WETH+NVDA (pool)' },
+      { chain: 'Robinhood', usd: 5719.00, label: 'Uniswap V3 · WETH+NVDA (pool), valor de reserva se a rede não responder', autoKey: 'Robinhood' },
       { chain: 'Robinhood', usd: 243.00, label: 'ETH + NVDA (carteira)' },
       { chain: 'Arbitrum', usd: 15.11, label: 'ARB 99,60 (carteira)' },
     ],
   };
-  const manualUSD = {};
-  for (const [w, items] of Object.entries(MANUAL_POSITIONS)) manualUSD[w] = items.reduce((s, i) => s + i.usd, 0);
+  // Redes lidas on-chain nesta sessão: itens com autoKey dessas redes saem da soma manual (evita contar duas vezes).
+  const autoChains = new Set();
+  const manualItems = (w) => (MANUAL_POSITIONS[w] || []).filter(i => !(i.autoKey && autoChains.has(i.autoKey)));
+  const manualUSDOf = (w) => manualItems(w).reduce((s, i) => s + i.usd, 0);
 
   // ---- Estado compartilhado com o simulador ----
   // O painel é a única fonte dos números: a cada ciclo de leitura ele grava aqui o estado consolidado
@@ -871,10 +873,7 @@
 
   // Patrimônio por rede de cada carteira: saldo em carteira + Aave (líquido) + pools Uniswap V3.
   // O que sobra até o total (poeira, recompensa Merkl) aparece como "Outros".
-  const chainParts = { spot: {}, aave: {}, pools: {}, manual: {} };
-  for (const [w, items] of Object.entries(MANUAL_POSITIONS)) {
-    for (const i of items) chainParts.manual[w] = { ...chainParts.manual[w], [i.chain]: ((chainParts.manual[w] || {})[i.chain] || 0) + i.usd };
-  }
+  const chainParts = { spot: {}, aave: {}, pools: {} };
   const CHAIN_COLORS = { Base: '#5b8def', Polygon: '#8a63d2', Arbitrum: '#3aa0c9', HyperEVM: '#4ea67a', Ethereum: '#8a92b2', Robinhood: '#d4a017', Outros: '#c98a3a' };
   function renderChainBars(totalsByWallet) {
     if (!snap.spot || !snap.aave) return; // espera saldo + Aave do mesmo ciclo, senão a divisão sai incompleta
@@ -883,6 +882,7 @@
       for (const part of Object.values(chainParts)) {
         for (const [chain, usd] of Object.entries(part[wallet] || {})) byChain[chain] = (byChain[chain] || 0) + usd;
       }
+      for (const i of manualItems(wallet)) byChain[i.chain] = (byChain[i.chain] || 0) + i.usd;
       const total = totalsByWallet[wallet];
       const known = Object.values(byChain).reduce((s, v) => s + v, 0);
       if (!(known > 0) || !(total > 0)) continue; // sem leitura ao vivo ainda: mantém o que está na tela
@@ -895,7 +895,7 @@
   }
 
   function recomputeTotals() {
-    const wt = (k) => SPOT_STATIC[k] + spotLive[k] + aaveNet[k] + poolsLive[k] + (manualUSD[k] || 0);
+    const wt = (k) => SPOT_STATIC[k] + spotLive[k] + aaveNet[k] + poolsLive[k] + manualUSDOf(k);
     const w1 = wt('Carteira 1'), w2 = wt('Carteira 2'), w3 = wt('Carteira 3');
     document.getElementById('w1Total').textContent = fmtUSD0(w1);
     document.getElementById('w2Total').textContent = fmtUSD0(w2);
@@ -1291,6 +1291,7 @@
     Base:     { rpc: 'https://base.publicnode.com',             posManager: '0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1', factory: '0x33128a8fC17869897dcE68Ed026d694621f6FDfD' },
     Polygon:  { rpc: 'https://polygon-bor-rpc.publicnode.com',   posManager: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88', factory: '0x1F98431c8aD98523631AE4a59f267346ea31F984' },
     HyperEVM: { rpc: 'https://rpc.hyperliquid.xyz/evm',           posManager: '0xeaD19AE861c29bBb2101E834922B2FEee69B9091', factory: '0xfF7B3e8C00e57ea31477c32A5B52a58Eea47b072' }, // Project X (fork Uniswap V3)
+    Robinhood: { rpc: 'https://rpc.mainnet.chain.robinhood.com', posManager: '0x73991a25c818bf1f1128deaab1492d45638de0d3', factory: '0x1f7d7550b1b028f7571e69a784071f0205fd2efa' }, // Uniswap V3 oficial (docs Uniswap)
   };
   function decodeSignedWord(hex64) {
     const v = BigInt('0x' + hex64);
@@ -1324,7 +1325,9 @@
   async function refreshPoolsLive() {
     const priceData = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,hyperliquid&vs_currencies=usd').then(r => r.json());
     const hypeUsd = (priceData.hyperliquid || {}).usd || 0;
-    const priceMap = { WBTC: priceData.bitcoin.usd, cbBTC: priceData.bitcoin.usd, BTC: priceData.bitcoin.usd, UBTC: priceData.bitcoin.usd, WETH: priceData.ethereum.usd, ETH: priceData.ethereum.usd, WHYPE: hypeUsd, HYPE: hypeUsd, USDC: 1, USDT: 1, DAI: 1, USDbC: 1 };
+    // NVDA: token tokenizado "NVIDIA (bStocks)" no CoinGecko, mesmo preço da ação (ex.: US$ 161,05 contra US$ 161,08 no DeBank)
+    const nvdaUsd = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=nvidia-bstocks&vs_currencies=usd').then(r => r.json()).then(j => (j['nvidia-bstocks'] || {}).usd || 0).catch(() => 0);
+    const priceMap = { WBTC: priceData.bitcoin.usd, cbBTC: priceData.bitcoin.usd, BTC: priceData.bitcoin.usd, UBTC: priceData.bitcoin.usd, WETH: priceData.ethereum.usd, ETH: priceData.ethereum.usd, WHYPE: hypeUsd, HYPE: hypeUsd, NVDA: nvdaUsd || null, USDC: 1, USDT: 1, DAI: 1, USDbC: 1 };
 
     // Pools de BTC/ETH contra stablecoin podem ser reavaliadas pelo simulador (liquidez concentrada + IL).
     const FAMILY = { WBTC: 'btc', cbBTC: 'btc', BTC: 'btc', WETH: 'eth', ETH: 'eth' };
@@ -1334,7 +1337,12 @@
     for (const [walletId, owner] of Object.entries(AAVE_WALLETS)) {
       let walletUSD = 0;
       for (const [chainName, cfg] of Object.entries(UNI_CHAINS)) {
+        try {
         const balRes = await ethCallBatch(cfg.rpc, [{ id: 'b', to: cfg.posManager, data: '0x70a08231' + padHex(owner.slice(2).toLowerCase()) }]);
+        // Sem resposta da rede = erro, não "zero posições": a rede volta a usar o valor manual de reserva.
+        if (balRes.b === undefined) throw new Error('rede sem resposta');
+        if (chainName === 'Robinhood' && !nvdaUsd) throw new Error('sem preço do NVDA');
+        if (chainName === 'Robinhood') autoChains.add('Robinhood');
         const n = parseInt(balRes.b, 16) || 0;
         if (n === 0) continue;
         const idxCalls = [];
@@ -1388,6 +1396,9 @@
           if (FAMILY[symbol0] && STABLE.has(symbol1)) Object.assign(pool, { mode: 'dynamic', volIs0: true, family: FAMILY[symbol0] });
           else if (FAMILY[symbol1] && STABLE.has(symbol0)) Object.assign(pool, { mode: 'dynamic', volIs0: false, family: FAMILY[symbol1] });
           poolList.push(pool);
+        }
+        } catch (e) { /* rede sem resposta: as outras redes seguem; a Robinhood usa o valor manual de reserva */
+          if (chainName === 'Robinhood') autoChains.delete('Robinhood');
         }
       }
       poolsLive[walletId] = walletUSD;
